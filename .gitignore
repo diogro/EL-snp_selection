@@ -19,4 +19,4 @@ vignettes/*.pdf
 .httr-oauth
 
 data/*
-./data
+data/
