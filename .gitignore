@@ -21,3 +21,4 @@ vignettes/*.pdf
 data
 data/
 data/*
+.Rproj.user
