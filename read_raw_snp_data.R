@@ -6,7 +6,7 @@ library(plyr)
 library(dplyr)
 library(tidyr)
 library(doMC)
-registerDoMC(4)
+registerDoMC(21)
 
 raw_data = read_delim("./data/All_biallelic_SNPs.table", " ")
 raw_data$rows <- NULL
@@ -19,3 +19,4 @@ just_snps = raw_data %>%
             filter(!grepl("chrM", CHROM))
 
 snp_array = as.matrix(just_snps[,4:15])
+snp_array_list = dlply(just_snps, .(CHROM), function(x) as.matrix(x[,4:15]))
