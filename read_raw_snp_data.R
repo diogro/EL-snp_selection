@@ -6,7 +6,7 @@ library(plyr)
 library(dplyr)
 library(tidyr)
 library(doMC)
-registerDoMC(4)
+registerDoMC(21)
 
 raw_data = read_delim("./data/All_biallelic_SNPs.table", " ")
 raw_data$rows <- NULL

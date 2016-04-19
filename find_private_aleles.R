@@ -34,7 +34,7 @@ get_A22A23_p = function(x){
 
 A22A42_mask = as.character((grepl("A22", names(x)) | grepl("A42", names(x))) + 1)
 get_A22A42_p = function(x){
-  if(all(tapply(x, A22A23_mask, function(row) length(unique(row))) == c(1, 1)))
+  if(all(tapply(x, A22A42_mask, function(row) length(unique(row))) == c(1, 1)))
     return(TRUE)
   else
     return(FALSE)
@@ -86,10 +86,10 @@ is_any_kind = function(x){
 #save(get_private, file = "./data/private_snp_position.Rdata")
 load("./data/private_snp_position.Rdata")
 
-# is_usefull = tbl_df(ldply(snp_array_list,
-#                           function(snp_array) adply(snp_array, 1, is_any_kind),
-#                           .parallel = TRUE))
-# save(is_usefull, file = "./data/usefull_snp_position.Rdata")
+ is_usefull = tbl_df(ldply(snp_array_list,
+                           function(snp_array) adply(snp_array, 1, is_any_kind),
+                           .parallel = TRUE))
+ save(is_usefull, file = "./data/usefull_snp_position.Rdata")
 load("./data/usefull_snp_position.Rdata")
 
 just_snps = mutate(just_snps,
@@ -128,7 +128,7 @@ psnps_plots = llply(unique(just_snps$CHROM),
                                 base_height = 5, base_aspect_ratio = 2)
                       return(private_alele_plot)
                     }, .parallel = TRUE)
-
+line_order = levels(just_snps$pu_line)
 u_snp_count <-
   just_snps %>%
   filter(is_usefull) %>%
@@ -152,7 +152,7 @@ psnps_plots = llply(unique(just_snps$CHROM),
                         ggplot(aes(pu_line, POS, color = pu_line)) +
                         geom_point(size = 0.3) + geom_point(size = 0.2, aes(0.5, POS)) +
                         coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
-                        #scale_color_discrete(labels = legend, name = "") +
+                        scale_color_discrete(labels = legend, name = "") +
                         ggtitle(current_chr)
                       save_plot(paste0("./data/jpegs/usnps_", current_chr, ".png"),
                                 private_alele_plot,
