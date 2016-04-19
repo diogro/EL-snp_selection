@@ -40,9 +40,10 @@ het_plots = llply(unique(just_snps$CHROM),
                                       aes(POS, value, group = variable, color = variable)) +
                       geom_line() + labs(y = "Mean heterozygocity",
                                          x = "Chromossomal Position (Mb)") +
-                      scale_color_discrete(name = "") +
+                      scale_color_discrete(name = "") + ylim(0, 1) +
                       ggtitle(current_chr)
                     save_plot(paste0("./data/jpegs/het_", current_chr, ".png"),
                               het_plot,
                               base_height = 5, base_aspect_ratio = 2)
+                    return(het_plot)
                   }, .parallel = TRUE)

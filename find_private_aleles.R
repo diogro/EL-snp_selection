@@ -31,24 +31,28 @@ snp_count <-
   filter(is_private) %>%
   count(p_line, CHROM)
 
-# snps_plot <-
-#   just_snps %>%
-#   filter(is_private) %>%
-#   select(CHROM, POS, p_line) %>%
-#   mutate(POS = POS/1e6)
-# for(current_chr in unique(just_snps$CHROM)){
-#   counts = filter(snp_count, CHROM == current_chr)
-#   counts = counts$n[which(line_order == filter(snp_count, CHROM == current_chr)$p_line)]
-#   legend = paste(line_order, "N =", counts)
-#   private_alele_plot <-
-#     snps_plot %>%
-#     filter(CHROM == current_chr) %>%
-#     ggplot(aes(p_line, POS, color = p_line)) +
-#     geom_point(size = 0.3) + geom_point(size = 0.2, aes(0.5, POS)) +
-#     coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
-#     scale_color_discrete(labels = legend, name = "") +
-#     ggtitle(current_chr)
-#    save_plot(paste0("./data/jpegs/new_", current_chr, ".png"),
-#              private_alele_plot,
-#              base_height = 5, base_aspect_ratio = 2)
-# }
+snps_plot_data <-
+  just_snps %>%
+  filter(is_private) %>%
+  select(CHROM, POS, p_line) %>%
+  mutate(POS = POS/1e6)
+psnps_plots = llply(unique(just_snps$CHROM),
+                    function(current_chr)
+                    {
+                      counts = filter(snp_count, CHROM == current_chr)
+                      counts = counts$n[which(line_order == filter(snp_count,
+                                                                   CHROM == current_chr)$p_line)]
+                      legend = paste(line_order, "N =", counts)
+                      private_alele_plot <-
+                        snps_plot_data %>%
+                        filter(CHROM == current_chr) %>%
+                        ggplot(aes(p_line, POS, color = p_line)) +
+                        geom_point(size = 0.3) + geom_point(size = 0.2, aes(0.5, POS)) +
+                        coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
+                        scale_color_discrete(labels = legend, name = "") +
+                        ggtitle(current_chr)
+                      save_plot(paste0("./data/jpegs/new_", current_chr, ".png"),
+                                private_alele_plot,
+                                base_height = 5, base_aspect_ratio = 2)
+                      return(private_alele_plot)
+                    }, .parallel = TRUE)
