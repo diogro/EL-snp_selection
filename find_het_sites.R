@@ -28,22 +28,22 @@ library(RcppRoll)
 # save(mean_het, file = "./data/mean_heterozygocity.Rdata")
 load("./data/mean_heterozygocity.Rdata")
 
-m_mean_het = melt(mean_het, id.vars = c("CHROM", "POS"))
-m_mean_het = mutate(m_mean_het,
-                    variable = factor(variable, levels = line_order),
-                    POS = POS/1e6)
+#m_mean_het = melt(mean_het, id.vars = c("CHROM", "POS"))
+#m_mean_het = mutate(m_mean_het,
+                    #variable = factor(variable, levels = line_order),
+                    #POS = POS/1e6)
 
-het_plots = llply(unique(just_snps$CHROM),
-                  function(current_chr)
-                  {
-                    het_plot = ggplot(filter(m_mean_het, CHROM == current_chr),
-                                      aes(POS, value, group = variable, color = variable)) +
-                      geom_line() + labs(y = "Mean heterozygocity",
-                                         x = "Chromossomal Position (Mb)") +
-                      scale_color_discrete(name = "") + ylim(0, 1) +
-                      ggtitle(current_chr)
-                    save_plot(paste0("./data/jpegs/het_", current_chr, ".png"),
-                              het_plot,
-                              base_height = 5, base_aspect_ratio = 2)
-                    return(het_plot)
-                  }, .parallel = TRUE)
+#het_plots = llply(unique(just_snps$CHROM),
+                  #function(current_chr)
+                  #{
+                    #het_plot = ggplot(filter(m_mean_het, CHROM == current_chr),
+                                      #aes(POS, value, group = variable, color = variable)) +
+                      #geom_line() + labs(y = "Mean heterozygocity",
+                                         #x = "Chromossomal Position (Mb)") +
+                      #scale_color_discrete(name = "") + ylim(0, 1) +
+                      #ggtitle(current_chr)
+                    #save_plot(paste0("./data/jpegs/het_", current_chr, ".png"),
+                              #het_plot,
+                              #base_height = 5, base_aspect_ratio = 2)
+                    #return(het_plot)
+                  #}, .parallel = TRUE)
