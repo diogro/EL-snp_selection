@@ -47,3 +47,41 @@ load("./data/mean_heterozygocity.Rdata")
                               #base_height = 5, base_aspect_ratio = 2)
                     #return(het_plot)
                   #}, .parallel = TRUE)
+
+snp_density_binary <- select(just_hets, CHROM, POS, A22_hets)
+snp_types = unique(just_snps$pu_line)[-1]
+for(current in snp_types){
+    new_var = paste0(current)
+    new_col = as.numeric(just_snps$pu_line == current)
+    new_col[is.na(new_col)] = 0
+    snp_density_binary = mutate_(snp_density_binary, .dots = setNames(list(new_col), new_var))
+}
+
+#snp_density_list = dlply(snp_density_binary, .(CHROM), function(x) select(x, A22_hets:A22A42))
+#snp_density = tbl_df(ldply(snp_density_list,
+                        #function(x) roll_mean(as.matrix(x),
+                                              #floor(dim(x)[1]/10), fill = NA, align = "center"),
+                        #.parallel = TRUE))
+#snp_density = bind_cols(select(snp_density_binary, CHROM, POS), snp_density[-1])
+#save(snp_density, file = "./data/snp_density.Rdata")
+load("data/snp_density.Rdata")
+
+m_snp_density = melt(snp_density, id.vars = c("CHROM", "POS"))
+m_snp_density = mutate(m_snp_density,
+                    variable = factor(variable, levels = line_order),
+                    POS = POS/1e6)
+
+snp_density_plots = llply(unique(just_snps$CHROM),
+                  function(current_chr)
+                  {
+                      snp_density_plot = ggplot(filter(m_snp_density, CHROM == current_chr),
+                                        aes(POS, value, group = variable, color = variable)) +
+                  geom_line() + labs(y = "Mean density",
+                                     x = "Chromossomal Position (Mb)") +
+                  scale_color_discrete(name = "") + ylim(0, 1) +
+                  ggtitle(current_chr)
+              save_plot(paste0("./data/jpegs/snp_density", current_chr, ".png"),
+                        snp_density_plot,
+                        base_height = 5, base_aspect_ratio = 2)
+              return(snp_density_plot)
+                  }, .parallel = TRUE)

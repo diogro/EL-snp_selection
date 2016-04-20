@@ -150,7 +150,7 @@ psnps_plots = llply(unique(just_snps$CHROM),
                         u_snps_plot_data %>%
                         filter(CHROM == current_chr) %>%
                         ggplot(aes(pu_line, POS, color = pu_line)) +
-                        geom_point(size = 0.3) + geom_point(size = 0.2, aes(0.5, POS)) +
+                        geom_point(size = 0.3, alpha = 0.1) + geom_point(size = 0.2, aes(0.5, POS)) +
                         coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
                         scale_color_discrete(labels = legend, name = "") +
                         ggtitle(current_chr)
