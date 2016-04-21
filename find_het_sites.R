@@ -57,42 +57,48 @@ for(current in snp_types){
     snp_density_binary[[new_var]] = new_col
 }
 names(snp_density_binary)
-snp_density_list = dlply(snp_density_binary, .(CHROM), function(x) select(x, A22_hets:A22A42))
-snp_density = tbl_df(ldply(snp_density_list,
-                           function(x) roll_mean(as.matrix(x),
-                                                 floor(dim(x)[1]/10), fill = NA, align = "center"),
-                           .parallel = TRUE))
-snp_density = bind_cols(select(snp_density_binary, CHROM, POS), snp_density[-1])
-save(snp_density, file = "./data/snp_density.Rdata")
-load("data/snp_density.Rdata")
-names(snp_density) = names(snp_density_binary)
 
-m_snp_density = melt(select(snp_density, CHROM, POS, A22_hets, A23:A22, A22_het_p_A42:A22A42),
-                     id.vars = c("CHROM", "POS"))
-m_snp_density = mutate(m_snp_density,
-                    POS = POS/1e6)
-m_snp_density[["class"]] <- c(NA, "A22r")[grepl("A22", m_snp_density$variable)+1]
-m_snp_density[["class"]][m_snp_density$variable == "A42"] <- "A42"
-m_snp_density[["class"]][m_snp_density$variable == "A23"] <- "A23"
-m_snp_density[["class"]][m_snp_density$variable == "A22_hets"] <- "A22_hets"
+resolution = 10
 
-levels(m_snp_density$variable)
-class_colors = c("black", "red", "darkred", "black", "green", "darkblue", "red", "blue", "blue")
-names(class_colors) <- levels(m_snp_density$variable)
-current_chr = "chr3"
-snp_density_plots = llply(unique(just_snps$CHROM),
-                  function(current_chr)
-                  {
-                      snp_density_plot <-
-                        ggplot(filter(m_snp_density, CHROM == current_chr),
-                                        aes(POS, value, group = variable, color = variable)) +
-                  geom_line() + labs(y = "Mean density",
-                                     x = "Chromossomal Position (Mb)") +
-                  scale_color_manual(name = "", values = class_colors) + #ylim(0, 0.001) +
-                  facet_wrap(~class, nrow = 4, scales = "free_y") +
-                  ggtitle(current_chr)
-              save_plot(paste0("./data/jpegs/snp_density", current_chr, ".png"),
-                        snp_density_plot,
-                        base_height = 8, base_aspect_ratio = 2)
-              return(snp_density_plot)
-                  }, .parallel = TRUE)
+create_snpDesityPlot <- function(resolution) {
+  snp_density_list = dlply(snp_density_binary, .(CHROM), function(x) select(x, A22_hets:A22A42))
+  snp_density = tbl_df(ldply(snp_density_list,
+                             function(x) roll_mean(as.matrix(x),
+                                                   floor(dim(x)[1])/resolution, fill = NA, align = "center"),
+                             .parallel = TRUE))
+  snp_density = bind_cols(select(snp_density_binary, CHROM, POS), snp_density[-1])
+  names(snp_density) = names(snp_density_binary)
+
+  m_snp_density = melt(select(snp_density, CHROM, POS, A22_hets, A23:A22, A22_het_p_A42:A22A42),
+                       id.vars = c("CHROM", "POS"))
+  m_snp_density = mutate(m_snp_density,
+                      POS = POS/1e6)
+  m_snp_density[["class"]] <- c(NA, "A22r")[grepl("A22", m_snp_density$variable)+1]
+  m_snp_density[["class"]][m_snp_density$variable == "A42"] <- "A42"
+  m_snp_density[["class"]][m_snp_density$variable == "A23"] <- "A23"
+  m_snp_density[["class"]][m_snp_density$variable == "A22_hets"] <- "A22_hets"
+
+  levels(m_snp_density$variable)
+  class_colors = c("black", "red", "darkred", "black", "green", "darkblue", "red", "blue", "blue")
+  names(class_colors) <- levels(m_snp_density$variable)
+  current_chr = "chr3"
+  snp_density_plots = llply(unique(just_snps$CHROM),
+                    function(current_chr)
+                    {
+                        snp_density_plot <-
+                          ggplot(filter(m_snp_density, CHROM == current_chr),
+                                          aes(POS, log1p(value), group = variable, color = variable)) +
+                    geom_line() + labs(y = "Mean density",
+                                       x = "Chromossomal Position (Mb)") +
+                    scale_color_manual(name = "", values = class_colors) + #ylim(0, 0.001) +
+                    facet_wrap(~class, nrow = 4, scales = "free_y") +
+                    ggtitle(current_chr)
+                save_plot(paste0("./data/jpegs/snp_density", current_chr, "res_", resolution, ".png"),
+                          snp_density_plot,
+                          base_height = 8, base_aspect_ratio = 2)
+                return(snp_density_plot)
+                    }, .parallel = TRUE)
+}
+create_snpDesityPlot(10)
+create_snpDesityPlot(100)
+create_snpDesityPlot(1000)
