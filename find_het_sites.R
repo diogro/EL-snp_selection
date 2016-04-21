@@ -60,7 +60,7 @@ names(snp_density_binary)
 snp_density_list = dlply(snp_density_binary, .(CHROM), function(x) select(x, A22_hets:A22A42))
 snp_density = tbl_df(ldply(snp_density_list,
                            function(x) roll_mean(as.matrix(x),
-                                                 2000, fill = NA, align = "center"),
+                                                 floor(dim(x)[1]/10), fill = NA, align = "center"),
                            .parallel = TRUE))
 snp_density = bind_cols(select(snp_density_binary, CHROM, POS), snp_density[-1])
 save(snp_density, file = "./data/snp_density.Rdata")
