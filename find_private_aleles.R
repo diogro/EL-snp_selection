@@ -103,59 +103,59 @@ p_snp_count <-
   filter(is_private) %>%
   count(p_line, CHROM)
 
-snps_plot_data <-
-  just_snps %>%
-  filter(is_private) %>%
-  select(CHROM, POS, p_line) %>%
-  mutate(POS = POS/1e6)
-psnps_plots = llply(unique(just_snps$CHROM),
-                    function(current_chr)
-                    {
-                      counts = filter(p_snp_count, CHROM == current_chr)
-                      counts = counts$n[which(line_order == filter(p_snp_count,
-                                                                   CHROM == current_chr)$p_line)]
-                      legend = paste(line_order, "N =", counts)
-                      private_alele_plot <-
-                        snps_plot_data %>%
-                        filter(CHROM == current_chr) %>%
-                        ggplot(aes(p_line, POS, color = p_line)) +
-                        geom_point(size = 0.3) + geom_point(size = 0.2, aes(0.5, POS)) +
-                        coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
-                        scale_color_discrete(labels = legend, name = "") +
-                        ggtitle(current_chr)
-                      save_plot(paste0("./data/jpegs/new_", current_chr, ".png"),
-                                private_alele_plot,
-                                base_height = 5, base_aspect_ratio = 2)
-                      return(private_alele_plot)
-                    }, .parallel = TRUE)
-line_order = levels(just_snps$pu_line)
-u_snp_count <-
-  just_snps %>%
-  filter(is_usefull) %>%
-  count(pu_line, CHROM)
-
-u_snps_plot_data <-
-  just_snps %>%
-  filter(is_usefull) %>%
-  select(CHROM, POS, pu_line) %>%
-  mutate(POS = POS/1e6)
-psnps_plots = llply(unique(just_snps$CHROM),
-                    function(current_chr)
-                    {
-                      counts = filter(u_snp_count, CHROM == current_chr)
-                      counts = counts$n[which(line_order == filter(u_snp_count,
-                                                                   CHROM == current_chr)$pu_line)]
-                      legend = paste(line_order, "N =", counts)
-                      private_alele_plot <-
-                        u_snps_plot_data %>%
-                        filter(CHROM == current_chr) %>%
-                        ggplot(aes(pu_line, POS, color = pu_line)) +
-                        geom_point(size = 0.3, alpha = 0.1) + geom_point(size = 0.2, aes(0.5, POS)) +
-                        coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
-                        scale_color_discrete(labels = legend, name = "") +
-                        ggtitle(current_chr)
-                      save_plot(paste0("./data/jpegs/usnps_", current_chr, ".png"),
-                                private_alele_plot,
-                                base_height = 5, base_aspect_ratio = 2)
-                      return(private_alele_plot)
-                    }, .parallel = TRUE)
+# snps_plot_data <-
+#   just_snps %>%
+#   filter(is_private) %>%
+#   select(CHROM, POS, p_line) %>%
+#   mutate(POS = POS/1e6)
+# psnps_plots = llply(unique(just_snps$CHROM),
+#                     function(current_chr)
+#                     {
+#                       counts = filter(p_snp_count, CHROM == current_chr)
+#                       counts = counts$n[which(line_order == filter(p_snp_count,
+#                                                                    CHROM == current_chr)$p_line)]
+#                       legend = paste(line_order, "N =", counts)
+#                       private_alele_plot <-
+#                         snps_plot_data %>%
+#                         filter(CHROM == current_chr) %>%
+#                         ggplot(aes(p_line, POS, color = p_line)) +
+#                         geom_point(size = 0.3) + geom_point(size = 0.2, aes(0.5, POS)) +
+#                         coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
+#                         scale_color_discrete(labels = legend, name = "") +
+#                         ggtitle(current_chr)
+#                       save_plot(paste0("./data/jpegs/new_", current_chr, ".png"),
+#                                 private_alele_plot,
+#                                 base_height = 5, base_aspect_ratio = 2)
+#                       return(private_alele_plot)
+#                     }, .parallel = TRUE)
+# line_order = levels(just_snps$pu_line)
+# u_snp_count <-
+#   just_snps %>%
+#   filter(is_usefull) %>%
+#   count(pu_line, CHROM)
+#
+# u_snps_plot_data <-
+#   just_snps %>%
+#   filter(is_usefull) %>%
+#   select(CHROM, POS, pu_line) %>%
+#   mutate(POS = POS/1e6)
+# psnps_plots = llply(unique(just_snps$CHROM),
+#                     function(current_chr)
+#                     {
+#                       counts = filter(u_snp_count, CHROM == current_chr)
+#                       counts = counts$n[which(line_order == filter(u_snp_count,
+#                                                                    CHROM == current_chr)$pu_line)]
+#                       legend = paste(line_order, "N =", counts)
+#                       private_alele_plot <-
+#                         u_snps_plot_data %>%
+#                         filter(CHROM == current_chr) %>%
+#                         ggplot(aes(pu_line, POS, color = pu_line)) +
+#                         geom_point(size = 0.3, alpha = 0.1) + geom_point(size = 0.2, aes(0.5, POS)) +
+#                         coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
+#                         scale_color_discrete(labels = legend, name = "") +
+#                         ggtitle(current_chr)
+#                       save_plot(paste0("./data/jpegs/usnps_", current_chr, ".png"),
+#                                 private_alele_plot,
+#                                 base_height = 5, base_aspect_ratio = 2)
+#                       return(private_alele_plot)
+#                     }, .parallel = TRUE)
