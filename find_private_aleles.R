@@ -82,17 +82,17 @@ is_any_kind = function(x){
   return(c(FALSE, NA))
 }
 
-get_private = ldply(snp_array_list,
-                    function(snp_array) adply(snp_array, 1, is_private),
-                    .parallel = TRUE)
-save(get_private, file = "./data/private_snp_position.Rdata")
-#load("./data/private_snp_position.Rdata")
+#get_private = ldply(snp_array_list,
+                    #function(snp_array) adply(snp_array, 1, is_private),
+                    #.parallel = TRUE)
+#save(get_private, file = "./data/private_snp_position.Rdata")
+load("./data/private_snp_position.Rdata")
 
-is_usefull = tbl_df(ldply(snp_array_list,
-                          function(snp_array) adply(snp_array, 1, is_any_kind),
-                          .parallel = TRUE))
-save(is_usefull, file = "./data/usefull_snp_position.Rdata")
-#load("./data/usefull_snp_position.Rdata")
+#is_usefull = tbl_df(ldply(snp_array_list,
+                          #function(snp_array) adply(snp_array, 1, is_any_kind),
+                          #.parallel = TRUE))
+#save(is_usefull, file = "./data/usefull_snp_position.Rdata")
+load("./data/usefull_snp_position.Rdata")
 
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
 just_snps = mutate(just_snps,
@@ -132,8 +132,6 @@ psnps_plots = llply(unique(just_snps$CHROM),
                       return(private_alele_plot)
                     }, .parallel = TRUE)
 
-u_line_order = levels(just_snps$pu_line)
-
 u_snp_count <-
   just_snps %>%
   filter(is_usefull) %>%
@@ -144,10 +142,12 @@ u_snps_plot_data <-
   filter(is_usefull) %>%
   select(CHROM, POS, pu_line) %>%
   mutate(POS = POS/1e6)
+current_chr = "chr2"
 psnps_plots = llply(unique(just_snps$CHROM),
                     function(current_chr)
                     {
                       counts = filter(u_snp_count, CHROM == current_chr)
+                      u_line_order = as.character(unique(filter(u_snp_count, CHROM == current_chr)$pu_line))
                       counts = counts$n[which(u_line_order == filter(u_snp_count,
                                                                    CHROM == current_chr)$pu_line)]
                       legend = paste(u_line_order, "N =", counts)
