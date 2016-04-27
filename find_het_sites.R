@@ -95,7 +95,6 @@ create_snpDesityPlot <- function(resolution, snp_density) {
   m_snp_density[["class"]][m_snp_density$variable == "A22_hets"] <- "A22_hets"
 
   levels(m_snp_density$variable)
-  class_colors = c("black", "red", "darkred", "black", "green", "darkblue", "red", "blue", "blue")
   class_colors = c("black", "red", "green", "blue", "darkblue", "darkred", "black", "red", "blue")
   names(class_colors) <- levels(m_snp_density$variable)
   current_chr = "chr3"
