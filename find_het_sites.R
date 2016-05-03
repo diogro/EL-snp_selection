@@ -8,7 +8,7 @@ get_heterozygote = function(x) tapply(x, by_line, function(row) length(unique(ro
                                #.parallel = TRUE))[,-1]
 #names(is_heterozygote) <- paste(unique(by_line), "hets", sep = "_")
 #save(is_heterozygote, file = "./data/heterozygotes_position.Rdata")
-#load("./data/heterozygotes_position.Rdata")
+load("./data/heterozygotes_position.Rdata")
 
 just_snps <- bind_cols(just_snps, is_heterozygote)
 
@@ -17,15 +17,15 @@ just_hets
 
 library(RcppRoll)
 
-het_array_list = dlply(just_hets, .(CHROM), function(x) select(x, contains("_hets")))
-mean_het = tbl_df(ldply(het_array_list,
-                 function(x) roll_mean(as.matrix(x),
-                                       floor(dim(x)[1]/100), fill = NA, align = "center"),
-                 .parallel = TRUE))
-mean_het = bind_cols(select(just_hets, CHROM, POS),
-                     mean_het[-1])
-names(mean_het)[3:8] <- unique(by_line)
-save(mean_het, file = "./data/mean_heterozygocity.Rdata")
+#het_array_list = dlply(just_hets, .(CHROM), function(x) select(x, contains("_hets")))
+#mean_het = tbl_df(ldply(het_array_list,
+                 #function(x) roll_mean(as.matrix(x),
+                                       #floor(dim(x)[1]/100), fill = NA, align = "center"),
+                 #.parallel = TRUE))
+#mean_het = bind_cols(select(just_hets, CHROM, POS),
+                     #mean_het[-1])
+#names(mean_het)[3:8] <- unique(by_line)
+#save(mean_het, file = "./data/mean_heterozygocity.Rdata")
 load("./data/mean_heterozygocity.Rdata")
 
 m_mean_het = melt(mean_het, id.vars = c("CHROM", "POS"))
@@ -65,11 +65,11 @@ calculate_snpDensity = function (resolution){
                              .parallel = TRUE))
   snp_density
 }
-snp_density_10   = calculate_snpDensity(10)
-snp_density_100  = calculate_snpDensity(100)
-snp_density_1000 = calculate_snpDensity(1000)
-save(snp_density_10, snp_density_100, snp_density_1000, file = "data/snp_density.Rdata")
-#load("data/snp_density.Rdata")
+#snp_density_10   = calculate_snpDensity(10)
+#snp_density_100  = calculate_snpDensity(100)
+#snp_density_1000 = calculate_snpDensity(1000)
+#save(snp_density_10, snp_density_100, snp_density_1000, file = "data/snp_density.Rdata")
+load("data/snp_density.Rdata")
 
 snp_density =  (snp_density_10)
 create_snpDesityPlot <- function(resolution, snp_density) {

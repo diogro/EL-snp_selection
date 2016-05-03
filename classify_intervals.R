@@ -19,7 +19,7 @@ classifyInterval <- function(snp_density) {
       dx = sort(x[,mask_het], decreasing = TRUE)
       out = bind_cols(id, data_frame(is_het = 1, alele_1 = names(dx)[1], alele_2 = names(dx)[2]))
     }
-    if(all(dx == 0)){out$alele_1 = NA; out$alele_2 = NA}
+    if(all(dx < 0.001)){out$alele_1 = NA; out$alele_2 = NA}
     return(out)
   }
   snp_density_list = dlply(snp_density, .(CHROM), identity)
@@ -55,6 +55,7 @@ interval_class_plots_100 = llply(unique(just_snps$CHROM),
                                          base_height = 5, base_aspect_ratio = 2)
                                return(interval_class_plot)
                              }, .parallel = TRUE)
+
 interval_class_plots_1000 = llply(unique(just_snps$CHROM),
                              function(current_chr)
                              {
