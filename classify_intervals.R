@@ -1,8 +1,6 @@
 source("./find_het_sites.R")
 
 classifyInterval <- function(snp_density) {
-  snp_density = bind_cols(select(snp_density_binary, CHROM, POS), snp_density[-1])
-  names(snp_density) = names(snp_density_binary)
   snp_density = select_(snp_density, "CHROM","POS",
                        "A22_hets", "A22_het_p_A23", "A22_het_p_A42", "A22_pri_het",
                        "A22", "A22A42", "A22A23")
@@ -30,7 +28,7 @@ classifyInterval <- function(snp_density) {
 }
 interval_class_100 = classifyInterval(snp_density_100)
 interval_class_1000 = classifyInterval(snp_density_1000)
-#save(interval_class_100, interval_class_1000, file = "data/intervalClass.Rdata")
+save(interval_class_100, interval_class_1000, file = "data/intervalClass.Rdata")
 #load("./data/intervalClass.Rdata")
 
 interval_class_plots_100 = llply(unique(just_snps$CHROM),
