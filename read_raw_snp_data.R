@@ -10,7 +10,7 @@ n_chunks = 50
 registerDoMC(n_chunks)
 
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
-new_raw_data = read_delim("./data/recalibrated_t90_snps_cohort.table", "\t")
+new_raw_data = read_delim("./data/recalibrated_snps_cohort.table", "\t")
 
 raw_data = new_raw_data %>%
   separate(A13.GT, c("A13_1", "A13_2"), sep = "/") %>%

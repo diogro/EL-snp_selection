@@ -70,7 +70,9 @@ selectFromAvailable = function(x, available, snps, min_dist, snps_per_class, ...
                 dists = abs(current_pos - x$POS)
                 dists = dists[dists != 0]
                 if(any(dists < min_dist)) next
-                snps = rbind_list(snps, possible_snps[i,])
+                new_snp = possible_snps[i,]
+                new_snp$priority = ifelse(k == 0 & new_snp$class != "50_50", 1, 0)
+                snps = rbind_list(snps, new_snp)
                 k = k+1
             }
             if(k > snps_per_class) break
@@ -79,7 +81,7 @@ selectFromAvailable = function(x, available, snps, min_dist, snps_per_class, ...
     snps
 }
 
-selectSNPchunk = function(x, min_dist = 30, snps_per_class = 4, ...){
+selectSNPchunk = function(x, min_dist = 35, snps_per_class = 4, ...){
     snps = NULL
     available_privates = unique(filter(x, class == "private")$snp_type)
     snps = selectFromAvailable(x, available_privates, snps, min_dist, snps_per_class, is_private = TRUE, ...)
@@ -93,28 +95,32 @@ selectSNPchunk = function(x, min_dist = 30, snps_per_class = 4, ...){
 }
 
 x = all_poly_list[["chr1.507"]]
-selectSNPchunk(x) %>% select(POS, QUAL, TYPE, class, snp_type)
-chromY = all_poly %>% filter(CHROM == "chrY")
-y_snps = selectSNPchunk(chromY, min_dist = 30, 100, private = c(5, 0), non_private = 5) %>% filter(class != "private_het")
-y_snps %>% select(POS, QUAL, TYPE, class, snp_type) 
-
-snp_dist =sort(diff(just_snps$POS))
-snp_dist = snp_dist[snp_dist > 0]
-quantile(snp_dist, seq(0, 1, 0.1))
+selectSNPchunk(x) %>% select(POS, QUAL, TYPE, class, snp_type, priority)
 
 new_all_poly_noY = (all_poly_noY)
 all_poly_list = dlply(new_all_poly_noY, .(CHROM, CHUNKS), identity)
-selected_snps = tbl_df(ldply(all_poly_list, selectSNPchunk, .parallel = TRUE)) %>% arrange(CHROM, POS)
+selected_snps_noY  = tbl_df(ldply(all_poly_list, selectSNPchunk, .parallel = TRUE)) %>% arrange(CHROM, POS)
+selected_snps_noY %>% count(priority)
 
-selected_dist = diff(selected_snps$POS)
+selected_dist = diff(selected_snps_noY$POS)
 quantile(selected_dist[selected_dist>0], seq(0, 1, 0.01))
-too_close = which(selected_dist == 1)
-selected_snps[c(too_close, too_close+1),]
-chunksStartStop[['chr8']]
+too_close = which(selected_dist == 6 )
+selected_dist[too_close]
+selected_snps = selected_snps_noY[-c(too_close, too_close+1),]
+
+chromY = all_poly %>% filter(CHROM == "chrY")
+snp_y_mask = names(chromY)
+snp_y_mask = (grepl("_1", snp_y_mask) | grepl("_2", snp_y_mask))
+chromY[,snp_y_mask] %>% print(n=100)
+chromY %>% count(TYPE, class)
+y_snps = selectSNPchunk(chromY, min_dist = 1, 100, private = c(0, 0), non_private = 0) %>% filter(class != "private_het") %>% arrange(POS)
+y_snps %>% select(POS, QUAL, TYPE, class, snp_type, priority) %>% print(n = 50)
+selected_snps =bind_rows(selected_snps, y_snps)
 
 sel_usnp_count <- selected_snps %>% count(snp_type, CHROM)
 sel_usnp_count %>% spread(snp_type, n) %>% print(n = 21)
-sel_usnp_quality <- selected_snps %>% group_by(CHROM) %>% summarize(min(QUAL), median(QUAL))
+sel_usnp_quality <- selected_snps %>% group_by(CHROM) %>% summarize(min(QUAL), quantile(QUAL, 0.1), median(QUAL))
+print(sel_usnp_quality, n = 21)
 
 u_snps_plot_data <-
     selected_snps %>%
@@ -145,3 +151,13 @@ psnps_plots = llply(unique(selected_snps$CHROM),
                                   base_height = 6.5, base_aspect_ratio = 2.3)
                         return(private_alele_plot)
                     }, .parallel = TRUE)
+
+selected_table = selected_snps %>% 
+    unite("A13", A13_1, A13_2, sep = "/") %>%
+    unite("A31", A31_1, A31_2, sep = "/") %>%
+    unite("A41", A41_1, A41_2, sep = "/") %>%
+    unite("A23", A23_1, A23_2, sep = "/") %>%
+    unite("A22", A22_1, A22_2, sep = "/") %>%
+    unite("A42", A42_1, A42_2, sep = "/") %>%
+    select(-is_bialelic, -CHUNKS, -TYPE)
+write_csv(selected_table, "./data/selected_snps.csv")
