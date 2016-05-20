@@ -106,24 +106,25 @@ load("./data/all_snp_position.Rdata")
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
 bialelic_snps = mutate(bialelic_snps,
                        class = is_snp$V1,
-                       snp_type = is_snp$V2)
-not_bialelic = all_poly %>%
+                       snp_type = is_snp$V2) %>% select(-CHUNKS)
+
+not_bialelic_snps = all_poly %>%
     filter(!is_bialelic) %>%
     mutate(class = NA,
            snp_type = NA)
 
 all_poly = bind_rows(bialelic_snps, not_bialelic_snps) %>% arrange(CHROM, POS)
 
-private_snps = all_snps %>% filter(class == "private")
+private_snps = all_poly %>% filter(class == "private")
 
 p_snp_count <-
-  all_snps %>%
+  all_poly %>%
   filter(class == "private") %>%
   count(snp_type, CHROM)
 (p_snp_count) %>% spread(snp_type, n) %>% print(n = 21)
 
 #snps_plot_data <-
-  #all_snps %>%
+  #all_poly %>%
   #filter(class == "private") %>%
   #select(CHROM, POS, snp_type) %>%
   #mutate(POS = POS/1e6)
@@ -148,11 +149,11 @@ p_snp_count <-
                       #return(private_alele_plot)
                     #}, .parallel = TRUE)
 
-u_snp_count <- all_snps %>% filter(!is.na(class)) %>% count(snp_type, CHROM)
+u_snp_count <- all_poly %>% filter(!is.na(class)) %>% count(snp_type, CHROM)
 u_snp_count %>% spread(snp_type, n) %>% print(n = 21)
 
 #u_snps_plot_data <-
-  #all_snps %>% filter(!is.na(class)) %>%
+  #all_poly %>% filter(!is.na(class)) %>%
   #select(CHROM, POS, snp_type) %>%
   #mutate(POS = POS/1e6)
 #snp_order = as.character(unique(u_snp_count$snp_type))

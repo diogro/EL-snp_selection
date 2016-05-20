@@ -13,7 +13,7 @@ total_snps = 50000
 snps_per_chrom = floor(as.numeric(chrom_sizes$diff[-21]) * (total_snps/total_size))
 names(snps_per_chrom) = chrom_sizes$CHROM[-21]
 
-chunks_per_chrom = floor(snps_per_chrom / 7)
+chunks_per_chrom = floor(snps_per_chrom / 7.3)
 names(chunks_per_chrom) = chrom_sizes$CHROM[-21]
 sum(chunks_per_chrom)
 
@@ -64,6 +64,8 @@ selectFromAvailable = function(x, available, snps, min_dist, snps_per_class, ...
     for(current_snp_type in available){
         k = 0
         possible_snps = filter(x, snp_type == current_snp_type) %>% arrange(desc(QUAL))
+        possible_snps = bind_rows(filter(possible_snps, aleles != "A/T", aleles != "C/G"),
+                                  filter(possible_snps, aleles == "A/T" | aleles == "C/G"))
         for(i in seq(nrow(possible_snps))){
             if(is_good(possible_snps[i,], ...)){
                 current_pos = possible_snps[i,]$POS
@@ -91,20 +93,32 @@ selectSNPchunk = function(x, min_dist = 35, snps_per_class = 4, ...){
     snps = selectFromAvailable(x, available_50_50, snps, min_dist, snps_per_class, ...)
     available_het = unique(filter(x, class == "private_het")$snp_type)
     snps = selectFromAvailable(x, available_het, snps, min_dist, snps_per_class, ...)
+    if(!is.null(snps)){
+        snps$nsnps_in_chunk = nrow(snps)
+        snps$nsnps_of_type = 0
+        snps$qual_rank = 0
+        for(type in unique(snps$snp_type)){
+            mask = snps$snp_type == type
+            n_snps = sum(mask)
+            snps$nsnps_of_type[mask] = n_snps
+            snps$qual_rank[mask] = 1:n_snps
+        }
+    }
     snps
 }
 
-x = all_poly_list[["chr1.507"]]
-selectSNPchunk(x) %>% select(POS, QUAL, TYPE, class, snp_type, priority)
+x = all_poly_list[["chr1.466"]]
+current_snp_type = na.omit(unique(x$snp_type))[1]
+selectSNPchunk(x) %>% select(POS, QUAL, TYPE, aleles, class, snp_type, priority, nsnps_in_chunk, nsnps_of_type, qual_rank)
 
 new_all_poly_noY = (all_poly_noY)
 all_poly_list = dlply(new_all_poly_noY, .(CHROM, CHUNKS), identity)
 selected_snps_noY  = tbl_df(ldply(all_poly_list, selectSNPchunk, .parallel = TRUE)) %>% arrange(CHROM, POS)
-selected_snps_noY %>% count(priority)
+selected_snps_noY %>% count(aleles)
 
 selected_dist = diff(selected_snps_noY$POS)
 quantile(selected_dist[selected_dist>0], seq(0, 1, 0.01))
-too_close = which(selected_dist == 6 )
+too_close = which(selected_dist == 11 | selected_dist == 20)
 selected_dist[too_close]
 selected_snps = selected_snps_noY[-c(too_close, too_close+1),]
 
@@ -119,7 +133,7 @@ selected_snps =bind_rows(selected_snps, y_snps)
 
 sel_usnp_count <- selected_snps %>% count(snp_type, CHROM)
 sel_usnp_count %>% spread(snp_type, n) %>% print(n = 21)
-sel_usnp_quality <- selected_snps %>% group_by(CHROM) %>% summarize(min(QUAL), quantile(QUAL, 0.1), median(QUAL))
+sel_usnp_quality <- selected_snps %>% group_by(CHROM) %>% summarize(min(QUAL), quantile(QUAL, 0.001), median(QUAL))
 print(sel_usnp_quality, n = 21)
 
 u_snps_plot_data <-
@@ -127,30 +141,30 @@ u_snps_plot_data <-
     select(CHROM, POS, snp_type) %>%
     mutate(POS = POS/1e6)
 
-snp_order = as.character(unique(sel_usnp_count$snp_type))
-snp_order = snp_order[order(nchar(snp_order))]
-u_snps_plot_data$snp_type = factor(u_snps_plot_data$snp_type, levels = snp_order)
-psnps_plots = llply(unique(selected_snps$CHROM),
-                    function(current_chr)
-                    {
-                        counts = filter(sel_usnp_count, CHROM == current_chr)
-                        u_line_order = as.character(unique(filter(sel_usnp_count, CHROM == current_chr)$snp_type))
-                        u_line_order = u_line_order[order(nchar(u_line_order))]
-                        counts = counts$n[match(u_line_order, counts$snp_type)]
-                        legend = paste(u_line_order, "N =", counts)
-                        private_alele_plot <-
-                            u_snps_plot_data %>%
-                            filter(CHROM == current_chr) %>%
-                            ggplot(aes(snp_type, POS, color = snp_type)) +
-                            geom_point(size = 0.2) + geom_point(size = 0.2, aes(0.5, POS)) +
-                            coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
-                            scale_color_discrete(labels = legend, name = "") +
-                            ggtitle(current_chr)
-                        save_plot(paste0("./data/jpegs/selected_usnps_", current_chr, ".png"),
-                                  private_alele_plot,
-                                  base_height = 6.5, base_aspect_ratio = 2.3)
-                        return(private_alele_plot)
-                    }, .parallel = TRUE)
+#snp_order = as.character(unique(sel_usnp_count$snp_type))
+#snp_order = snp_order[order(nchar(snp_order))]
+#u_snps_plot_data$snp_type = factor(u_snps_plot_data$snp_type, levels = snp_order)
+#psnps_plots = llply(unique(selected_snps$CHROM),
+                    #function(current_chr)
+                    #{
+                        #counts = filter(sel_usnp_count, CHROM == current_chr)
+                        #u_line_order = as.character(unique(filter(sel_usnp_count, CHROM == current_chr)$snp_type))
+                        #u_line_order = u_line_order[order(nchar(u_line_order))]
+                        #counts = counts$n[match(u_line_order, counts$snp_type)]
+                        #legend = paste(u_line_order, "N =", counts)
+                        #private_alele_plot <-
+                            #u_snps_plot_data %>%
+                            #filter(CHROM == current_chr) %>%
+                            #ggplot(aes(snp_type, POS, color = snp_type)) +
+                            #geom_point(size = 0.2) + geom_point(size = 0.2, aes(0.5, POS)) +
+                            #coord_flip() + labs(x = "Line", y = "Chromossomal Position (Mb)") +
+                            #scale_color_discrete(labels = legend, name = "") +
+                            #ggtitle(current_chr)
+                        #save_plot(paste0("./data/jpegs/selected_usnps_", current_chr, ".png"),
+                                  #private_alele_plot,
+                                  #base_height = 6.5, base_aspect_ratio = 2.3)
+                        #return(private_alele_plot)
+                    #}, .parallel = TRUE)
 
 selected_table = selected_snps %>% 
     unite("A13", A13_1, A13_2, sep = "/") %>%
@@ -159,5 +173,5 @@ selected_table = selected_snps %>%
     unite("A23", A23_1, A23_2, sep = "/") %>%
     unite("A22", A22_1, A22_2, sep = "/") %>%
     unite("A42", A42_1, A42_2, sep = "/") %>%
-    select(-is_bialelic, -CHUNKS, -TYPE)
+    select(-is_bialelic, -TYPE)
 write_csv(selected_table, "./data/selected_snps.csv")
