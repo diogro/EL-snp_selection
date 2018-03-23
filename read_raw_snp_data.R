@@ -5,8 +5,9 @@ library(reshape2)
 library(plyr)
 library(dplyr)
 library(tidyr)
+library(purrr)
 library(doMC)
-n_chunks = 80
+n_chunks = 8
 registerDoMC(n_chunks)
 
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
