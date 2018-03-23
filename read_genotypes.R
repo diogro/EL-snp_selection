@@ -3,10 +3,11 @@ library(ggplot2)
 library(cowplot)
 library(reshape2)
 library(plyr)
-library(dplyr)
 library(tidyr)
 library(purrr)
 library(doMC)
+library(MasterBayes)
+library(dplyr)
 n_chunks = 8
 registerDoMC(n_chunks)
 
@@ -50,7 +51,7 @@ tail(colnames(raw_gen))
 n = length(colnames(raw_gen))
 
 gen = dplyr::select(raw_gen, Chr_id, Start, everything()) %>%
-  select(-Allele_Count) %>%
+  dplyr::select(-Allele_Count) %>%
   rename(chr = Chr_id,
          pos = Start) %>%
   arrange(chr, pos) %>%
@@ -58,14 +59,20 @@ gen = dplyr::select(raw_gen, Chr_id, Start, everything()) %>%
 
 ## From http://churchill-lab.jax.org/mousemapconverter
 ## NCBI Build 37 bp -> Sex-Averaged cM Cox
-positions = read_table2("./data/marker_positions.txt", col_names = c("chr", "pos", "chr2", "gpos"), col_types = "iidd")[,-3]
+positions = read.table("./data/marker_positions.txt", header = FALSE, stringsAsFactors = FALSE) %>% tbl_df
+names(positions) = c("chr2", "pos", "chr", "gpos")
+positions$chr = as.integer(positions$chr)
+tail(positions$chr)
+gen = inner_join(positions, gen, by = c("chr", "pos")) %>% dplyr::select(chr, everything(), -chr2)
 
-gen = inner_join(positions, gen, by = c("chr", "pos"))
-
-IDs = data_frame(ID = strsplit(colnames(raw_gen)[c(-(n-2), -(n-1), -n)], split = "_") %>% map(1) %>% unlist %>% as.numeric,           pID = colnames(raw_gen)[c(-(n-2), -(n-1), -n)])
+IDs = data_frame(ID = strsplit(colnames(raw_gen)[c(-(n-2), -(n-1), -n)], split = "_") %>%
+                   map(1) %>%
+                   unlist %>%
+                   as.numeric,
+                 pID = colnames(raw_gen)[c(-(n-2), -(n-1), -n)])
 
 pat_snped = inner_join(full_data_Strain, IDs, by = "ID") %>%
-  select(pID, ID, Litter_ID_new:Mat_ID)
+  dplyr::select(pID, ID, Litter_ID_new:Mat_ID)
 table(pat_snped$Strain)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
@@ -84,7 +91,7 @@ anti_join(IDs, pat_snped, by = "ID") %>%
 
 nrow(IDs) - (nrow(pat_snped) + nrow(f6_snped) + nrow(f5_snped) + nrow(f1_snped))
 
-pat_gen = gen %>% select(chr, pos, gpos, pat_snped$pID)
+pat_gen = gen %>% dplyr::select(chr, pos, gpos, pat_snped$pID)
 x = pat_gen[7,-c(1, 2, 3)]
 (t1 = table(pat_snped$Strain[x == "AA"]))
 (t2 = table(pat_snped$Strain[x == "BB"]))
