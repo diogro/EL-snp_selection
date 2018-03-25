@@ -8,7 +8,7 @@ library(purrr)
 library(doMC)
 library(MasterBayes)
 library(dplyr)
-n_chunks = 8
+n_chunks = 4
 registerDoMC(n_chunks)
 
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
@@ -55,6 +55,7 @@ gen = dplyr::select(raw_gen, Chr_id, Start, everything()) %>%
   rename(chr = Chr_id,
          pos = Start) %>%
   arrange(chr, pos) %>%
+  mutate(ID = paste(chr, pos, sep = "_")) %>%
   filter(chr != 21)
 
 ## From http://churchill-lab.jax.org/mousemapconverter
@@ -63,7 +64,7 @@ positions = read.table("./data/marker_positions.txt", header = FALSE, stringsAsF
 names(positions) = c("chr2", "pos", "chr", "gpos")
 positions$chr = as.integer(positions$chr)
 tail(positions$chr)
-gen = inner_join(positions, gen, by = c("chr", "pos")) %>% dplyr::select(chr, everything(), -chr2)
+gen = inner_join(positions, gen, by = c("chr", "pos")) %>% dplyr::select(ID, chr, everything(), -chr2)
 
 IDs = data_frame(ID = strsplit(colnames(raw_gen)[c(-(n-2), -(n-1), -n)], split = "_") %>%
                    map(1) %>%
@@ -91,37 +92,65 @@ anti_join(IDs, pat_snped, by = "ID") %>%
 
 nrow(IDs) - (nrow(pat_snped) + nrow(f6_snped) + nrow(f5_snped) + nrow(f1_snped))
 
-pat_gen = gen %>% dplyr::select(chr, pos, gpos, pat_snped$pID)
-x = pat_gen[7,-c(1, 2, 3)]
-(t1 = table(pat_snped$Strain[x == "AA"]))
-(t2 = table(pat_snped$Strain[x == "BB"]))
-(t3 = table(pat_snped$Strain[x == "AB"]))
 
-toNumeric  = function(x) factor(x, levels = c('AA', 'AB', 'BB'))
-
-current_line = line_order[3]
-current_line_gen = gen %>% select(Chr_id, Start, filter(pat_snped, Strain == current_line)$pID)
-
-A23 = map_df(current_line_gen[,-c(1, 2)], toNumeric) %>% as.data.frame %>% na.omit
-head(A23)
-cov(A23)
-
-gen_class = c("AA", "BB", "AB")
-cl = line_order[1]
-gen_class[c(cl %in% names(t1), cl %in% names(t2), cl %in% names(t3))]
-
-
-is_any_kind = function(x){
-  tx = table(x)
-  snp_kind = NULL
-  if(!is.null(snp_kind <- get_private(x, tx))) return(c("private", snp_kind))
-  if(!is.null(snp_kind <- get_two_four(x, tx))) return(c("two_four", snp_kind))
-  if(!is.null(snp_kind <- get_50_50(x, tx))) return(c("50_50", snp_kind))
-  if(any(tx == 1)){
-    if(get_A22_p_het(x)) return(c("private_het", "A22_pri_het"))
-  } else if(any(tx == 3)){
-    if(get_A22_het_p_42(x)) return(c("private_het", "A22_het_p_A42"))
-    else if(get_A22_het_p_23(x)) return(c("private_het", "A22_het_p_A23"))
+pat_gen = gen %>% dplyr::select(ID, chr, pos, gpos, pat_snped$pID)
+as.vector(pat_gen[1,])
+ggplot(pat_gen, aes(x = gpos, y = chr)) + geom_point()
+current_line = line_order[2]
+getConsensusCall = function(current_line){
+  current_line_gen = gen %>% select(ID, chr, pos, gpos, filter(pat_snped, Strain == current_line)$pID)
+  getConsensusCallPerSnp = function(current_snp){
+    x = current_snp[-c(1, 2, 3, 4)]
+    tx = table(x)
+    colnames(tx)[which.max(tx)]
   }
-  return(c(NA, NA))
+  unlist(alply(current_line_gen, 1, getConsensusCallPerSnp))
 }
+strain_genotypes = laply(line_order, getConsensusCall, .progress = "text")
+rownames(strain_genotypes) = line_order
+
+
+header = paste("marker", dim(strain_genotypes)[2], "strain 6")
+strain_string = paste0("strain_names ", paste(line_order, collapse = " "))
+NA_string = paste0("allele NA ", paste(rep(1/6, 6), collapse = " "))
+generateSNPentry = function(i){
+  current_snp_ID = pat_gen[i,1:4]
+  current_snp = strain_genotypes[,i]
+  (hasAA = current_snp == "AA")
+  (hasBB = current_snp == "BB")
+  (hasAB = current_snp == "AB")
+  hasA = (map2_lgl(hasAA, hasAB, `|`))
+  hasB = (map2_lgl(hasBB, hasAB, `|`))
+  nA = sum(hasA)
+  nB = sum(hasB)
+  rowA = numeric(6)
+  rowB = numeric(6)
+  rowA[hasA] = 1/nA
+  rowB[hasB] = 1/nB
+  out = paste0("marker ", current_snp_ID$ID, " 3 ", current_snp_ID$gpos, "\n",
+               NA_string, "\n",
+               "allele A ", paste(rowA, collapse = " "), "\n",
+               "allele B ", paste(rowB, collapse = " "))
+  return(out)
+}
+marker_entries = llply(seq_along(1:dim(strain_genotypes)[2]), generateSNPentry, .progress = "text")
+
+write_lines(header, "sink_alleles.txt")
+write_lines(strain_string, "sink_alleles.txt", append = TRUE)
+write_lines(marker_entries, "sink_alleles.txt", append = TRUE)
+
+
+f6_genotypes = gen %>% select(ID, chr, pos, gpos, filter(f6_snped)$pID)
+
+df = f6_genotypes[,-c(2:4)] %>%
+  replace(., . == "NoCall", "NA/NA") %>%
+  replace(., . == "AA", "A/A") %>%
+  replace(., . == "BB", "B/B") %>%
+  replace(., . == "AB", "A/B")
+
+t.df = df %>%
+  gather(var, value, -ID) %>%
+  spread(ID, value)
+write_tsv(t.df, "f6_genotypes_happy.tsv")
+
+
