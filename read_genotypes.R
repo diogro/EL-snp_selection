@@ -19,6 +19,8 @@ full_data = read_csv("./data/Mouse phenotypes.csv") %>%
                 Birth_litter_size_weaning, Foster_litter_size_weaning,
                 Weight_D0:Weight_D70, Final_weight, Liver:Fat)
 
+full_data_F5F6 =  full_data %>% filter(Gen == "F6" | Gen == "F5")
+
 full_data_F6 =  full_data %>% filter(Gen == "F6")
 
 full_data_F5 = full_data %>% filter(Gen == "F5")
@@ -64,6 +66,9 @@ pat_snped = inner_join(full_data_Strain, IDs, by = "ID") %>%
   dplyr::select(pID, ID, Strain, Litter_ID_new:Mat_ID)
 table(pat_snped$Strain)
 
+f5f6_snped = inner_join(full_data_F5F6, IDs, by = "ID") %>%
+  select(pID, ID, Litter_ID_new:Mat_ID)
+
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
   select(pID, ID, Litter_ID_new:Mat_ID)
 
@@ -96,7 +101,7 @@ getConsensusCall = function(current_line){
 strain_genotypes = laply(line_order, getConsensusCall, .progress = "text")
 rownames(strain_genotypes) = line_order
 
-header = paste("marker", dim(strain_genotypes)[2], "strain 6")
+header = paste("markers", dim(strain_genotypes)[2], "strains 6")
 strain_string = paste0("strain_names ", paste(line_order, collapse = " "))
 NA_string = paste0("allele NA ", paste(rep(1/6, 6), collapse = " "))
 generateSNPentry = function(i){
@@ -126,9 +131,9 @@ write_lines(header, "./data/markers_strain_split_chr6.txt")
 write_lines(strain_string, "./data/markers_strain_split_chr6.txt", append = TRUE)
 write_lines(marker_entries, "./data/markers_strain_split_chr6.txt", append = TRUE)
 
-f6_genotypes = gen %>% select(ID, chr, pos, gpos, filter(f6_snped)$pID)
+f5f6_genotypes = gen %>% select(ID, chr, pos, gpos, filter(f6_snped)$pID, filter(f5_snped)$pID)
 
-df = f6_genotypes[,-c(2:4)] %>%
+df = f5f6_genotypes[,-c(2:4)] %>%
   replace(., . == "NoCall", "NA\tNA") %>%
   replace(., . == "AA", "A\tA") %>%
   replace(., . == "BB", "B\tB") %>%
@@ -140,12 +145,20 @@ t.df = df %>%
 t.df = t.df %>%
   rename(pID = var)
 
-f6_happy = inner_join(dplyr::select(inner_join(dplyr::select(full_data_F6, ID, Final_weight), f6_snped, by = "ID"), pID, Final_weight), t.df, by = "pID") %>%
-  rename(SAMPLE_ID = pID, PHENOTYPE = Final_weight) %>%
-  select(SAMPLE_ID, PHENOTYPE, df$ID)
+f5f6_happy =
+  inner_join(dplyr::select(inner_join(dplyr::select(full_data_F5F6, ID, Final_weight), f5f6_snped, by = "ID"),                                    Litter_ID_new, ID, Mat_ID, Pat_ID, Sex, pID, Final_weight),
+             t.df, by = "pID") %>%
+  rename("#Family-id" = Litter_ID_new,
+         "individual-id" = ID,
+         "mother-id" = Mat_ID,
+         "father-id" = Pat_ID,
+         sex = Sex,
+         phenotype = Final_weight) %>%
+  mutate(sex = as.numeric(as.factor(sex))) %>%
+  dplyr::select("#Family-id", "individual-id", "mother-id", "father-id", "sex", "phenotype", df$ID)
 
 f6_happy
 
-write_tsv(f6_happy, "./data/f6_genotypes_happy_chr6.tsv")
+write_tsv(f5f6_happy, "./data/f5f6_genotypes_happy_chr6.PED")
 
-
+system("sed -i 's/\"//g' ./data/f5f6_genotypes_happy_chr6.PED")
