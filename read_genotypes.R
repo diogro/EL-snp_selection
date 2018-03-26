@@ -8,7 +8,7 @@ if(!require(purrr)){install.packages("purrr"); library(purrr)}
 library(doMC)
 library(MasterBayes)
 library(dplyr)
-n_chunks = 4
+n_chunks = 6
 registerDoMC(n_chunks)
 
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
@@ -50,7 +50,9 @@ positions = read.table("./data/marker_positions.txt", header = FALSE, stringsAsF
 names(positions) = c("chr2", "pos", "chr", "gpos")
 positions$chr = as.integer(positions$chr)
 tail(positions$chr)
-gen = inner_join(positions, gen, by = c("chr", "pos")) %>% dplyr::select(ID, chr, everything(), -chr2)
+gen = inner_join(positions, gen, by = c("chr", "pos")) %>%
+  dplyr::select(ID, chr, everything(), -chr2) %>%
+  filter(chr == 6)
 
 IDs = data_frame(ID = strsplit(colnames(raw_gen)[c(-(n-2), -(n-1), -n)], split = "_") %>%
                    map(1) %>%
@@ -78,7 +80,8 @@ anti_join(IDs, pat_snped, by = "ID") %>%
 
 nrow(IDs) - (nrow(pat_snped) + nrow(f6_snped) + nrow(f5_snped) + nrow(f1_snped))
 
-pat_gen = gen %>% dplyr::select(ID, chr, pos, gpos, pat_snped$pID)
+pat_gen = gen %>%
+  dplyr::select(ID, chr, pos, gpos, pat_snped$pID)
 ggplot(pat_gen, aes(x = gpos, y = chr)) + geom_point(size = 0.3, alpha = 0.5)
 current_line = line_order[2]
 getConsensusCall = function(current_line){
@@ -117,12 +120,11 @@ generateSNPentry = function(i){
   return(out)
 }
 marker_entries = llply(seq_along(1:dim(strain_genotypes)[2]), generateSNPentry, .progress = "text")
-marker_entries[10000]
+marker_entries[100]
 
-write_lines(header, "./data/sink_alleles.txt")
-write_lines(strain_string, "./data/sink_alleles.txt", append = TRUE)
-write_lines(marker_entries, "./data/sink_alleles.txt", append = TRUE)
-
+write_lines(header, "./data/markers_strain_split_chr6.txt")
+write_lines(strain_string, "./data/markers_strain_split_chr6.txt", append = TRUE)
+write_lines(marker_entries, "./data/markers_strain_split_chr6.txt", append = TRUE)
 
 f6_genotypes = gen %>% select(ID, chr, pos, gpos, filter(f6_snped)$pID)
 
@@ -144,6 +146,6 @@ f6_happy = inner_join(dplyr::select(inner_join(dplyr::select(full_data_F6, ID, F
 
 f6_happy
 
-write_tsv(f6_happy, "./data/f6_genotypes_happy.tsv")
+write_tsv(f6_happy, "./data/f6_genotypes_happy_chr6.tsv")
 
 
