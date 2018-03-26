@@ -4,7 +4,7 @@ library(cowplot)
 library(reshape2)
 library(plyr)
 library(tidyr)
-library(purrr)
+if(!require(purrr)){install.packages("purrr"); library(purrr)}
 library(doMC)
 library(MasterBayes)
 library(dplyr)
@@ -13,40 +13,26 @@ registerDoMC(n_chunks)
 
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
 
-full_data_F6 = read_csv("./data/Mouse phenotypes.csv") %>%
+full_data = read_csv("./data/Mouse phenotypes.csv") %>%
   dplyr::select(Litter_ID_new:Sex,
-                Gen, Pat_ID, Mat_ID, Nurse_ID, Litter_size_birth,
+                Gen, Pat_ID, Mat_ID, Nurse_ID, Strain, Litter_size_birth,
                 Birth_litter_size_weaning, Foster_litter_size_weaning,
-                Weight_D0:Weight_D70, Final_weight, Liver:Fat) %>%
-  filter(Gen == "F6")
+                Weight_D0:Weight_D70, Final_weight, Liver:Fat)
 
-full_data_F5 = read_csv("./data/Mouse phenotypes.csv") %>%
-  dplyr::select(Litter_ID_new:Sex,
-                Gen, Pat_ID, Mat_ID, Nurse_ID, Litter_size_birth,
-                Birth_litter_size_weaning, Foster_litter_size_weaning,
-                Weight_D0:Weight_D70, Final_weight, Liver:Fat) %>%
-  filter(Gen == "F5")
+full_data_F6 =  full_data %>% filter(Gen == "F6")
 
-full_data_F1 = read_csv("./data/Mouse phenotypes.csv") %>%
-  dplyr::select(Litter_ID_new:Sex,
-                Gen, Pat_ID, Mat_ID, Nurse_ID, Litter_size_birth,
-                Birth_litter_size_weaning, Foster_litter_size_weaning,
-                Weight_D0:Weight_D70, Final_weight, Liver:Fat) %>%
-  filter(Gen == "F1")
+full_data_F5 = full_data %>% filter(Gen == "F5")
 
-full_data_Strain = read_csv("./data/Mouse phenotypes.csv") %>%
-  dplyr::select(Litter_ID_new:Sex,
-                Gen, Strain, Pat_ID, Mat_ID, Nurse_ID, Litter_size_birth,
-                Birth_litter_size_weaning, Foster_litter_size_weaning,
-                Weight_D0:Weight_D70, Final_weight, Liver:Fat) %>%
-  filter(Gen == "Strain")
+full_data_F1 = full_data %>% filter(Gen == "F1")
+
+full_data_Strain = full_data %>% filter(Gen == "Strain")
 
 full_data_F6$ID[full_data_F6$ID == 3202] = 3302
 
 pedigree = as.data.frame(read.csv("./data/Intercross_pedigree.csv")) %>%
   rename(id = animal) %>% orderPed
 
-raw_gen = read_table2("~/Dropbox/labbio/data/Atchley project/Genotypes/raw_atchley_genotypes.txt", comment = "#")[-1]
+raw_gen = read_table2("./data/raw_atchley_genotypes.txt", comment = "#")[-1]
 tail(colnames(raw_gen))
 n = length(colnames(raw_gen))
 
@@ -73,7 +59,7 @@ IDs = data_frame(ID = strsplit(colnames(raw_gen)[c(-(n-2), -(n-1), -n)], split =
                  pID = colnames(raw_gen)[c(-(n-2), -(n-1), -n)])
 
 pat_snped = inner_join(full_data_Strain, IDs, by = "ID") %>%
-  dplyr::select(pID, ID, Litter_ID_new:Mat_ID)
+  dplyr::select(pID, ID, Strain, Litter_ID_new:Mat_ID)
 table(pat_snped$Strain)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
@@ -92,13 +78,11 @@ anti_join(IDs, pat_snped, by = "ID") %>%
 
 nrow(IDs) - (nrow(pat_snped) + nrow(f6_snped) + nrow(f5_snped) + nrow(f1_snped))
 
-
 pat_gen = gen %>% dplyr::select(ID, chr, pos, gpos, pat_snped$pID)
-as.vector(pat_gen[1,])
-ggplot(pat_gen, aes(x = gpos, y = chr)) + geom_point()
+ggplot(pat_gen, aes(x = gpos, y = chr)) + geom_point(size = 0.3, alpha = 0.5)
 current_line = line_order[2]
 getConsensusCall = function(current_line){
-  current_line_gen = gen %>% select(ID, chr, pos, gpos, filter(pat_snped, Strain == current_line)$pID)
+  current_line_gen = gen %>% dplyr::select(ID, chr, pos, gpos, filter(pat_snped, Strain == current_line)$pID)
   getConsensusCallPerSnp = function(current_snp){
     x = current_snp[-c(1, 2, 3, 4)]
     tx = table(x)
@@ -108,7 +92,6 @@ getConsensusCall = function(current_line){
 }
 strain_genotypes = laply(line_order, getConsensusCall, .progress = "text")
 rownames(strain_genotypes) = line_order
-
 
 header = paste("marker", dim(strain_genotypes)[2], "strain 6")
 strain_string = paste0("strain_names ", paste(line_order, collapse = " "))
@@ -134,23 +117,33 @@ generateSNPentry = function(i){
   return(out)
 }
 marker_entries = llply(seq_along(1:dim(strain_genotypes)[2]), generateSNPentry, .progress = "text")
+marker_entries[10000]
 
-write_lines(header, "sink_alleles.txt")
-write_lines(strain_string, "sink_alleles.txt", append = TRUE)
-write_lines(marker_entries, "sink_alleles.txt", append = TRUE)
+write_lines(header, "./data/sink_alleles.txt")
+write_lines(strain_string, "./data/sink_alleles.txt", append = TRUE)
+write_lines(marker_entries, "./data/sink_alleles.txt", append = TRUE)
 
 
 f6_genotypes = gen %>% select(ID, chr, pos, gpos, filter(f6_snped)$pID)
 
 df = f6_genotypes[,-c(2:4)] %>%
-  replace(., . == "NoCall", "NA/NA") %>%
-  replace(., . == "AA", "A/A") %>%
-  replace(., . == "BB", "B/B") %>%
-  replace(., . == "AB", "A/B")
+  replace(., . == "NoCall", "NA\tNA") %>%
+  replace(., . == "AA", "A\tA") %>%
+  replace(., . == "BB", "B\tB") %>%
+  replace(., . == "AB", "A\tB")
 
 t.df = df %>%
   gather(var, value, -ID) %>%
   spread(ID, value)
-write_tsv(t.df, "f6_genotypes_happy.tsv")
+t.df = t.df %>%
+  rename(pID = var)
+
+f6_happy = inner_join(dplyr::select(inner_join(dplyr::select(full_data_F6, ID, Final_weight), f6_snped, by = "ID"), pID, Final_weight), t.df, by = "pID") %>%
+  rename(SAMPLE_ID = pID, PHENOTYPE = Final_weight) %>%
+  select(SAMPLE_ID, PHENOTYPE, df$ID)
+
+f6_happy
+
+write_tsv(f6_happy, "./data/f6_genotypes_happy.tsv")
 
 
