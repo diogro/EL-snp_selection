@@ -4,7 +4,6 @@ source("read_genotypes.R")
 library(happy)
 
 if(!require(kinship2)){install.packages("kinship2"); library(kinship2)}
-if(!require(SparseM)){install.packages("SparseM"); library(SparseM)}
 
 .n = function(x) as.numeric(as.factor(x))
 pedigree = as.data.frame(read.csv("./data/Intercross_pedigree2.csv")) %>% dplyr::rename(id = animal) %>% orderPed
@@ -19,7 +18,7 @@ for(i in 1:nrow(ped2)){
 pedAll <- pedigree(id=ped2$ID,
                    dadid=ped2$sire, momid=ped2$dam,
                    sex=ped2$Sex)
-A = Matrix(2*kinship(pedAll), sparse = TRUE)
+A = 2*kinship(pedAll)
 
 h <- happy('./data/f5f6_genotypes_happy_chr6.PED', 'data/markers_strain_split_chr6.txt',
            generations=6,
@@ -33,7 +32,7 @@ names(full_data)
 data = left_join(x, full_data_F5F6, by = "ID") %>%
   mutate(animal = ID) %>%
   filter(Gen == "F6") %>%
-  dplyr::select(ID, animal, Final_weight, Sex, Litter_size_birth, Birth_litter_size_weaning, Foster_litter_size_weaning, line_order) %>%
+  dplyr::select(Litter_ID_new, ID, animal, Final_weight, Sex, Litter_size_birth, Birth_litter_size_weaning, Foster_litter_size_weaning, line_order) %>%
   filter(!is.na(Final_weight))
 
 fixed_term = "Sex + Litter_size_birth + Birth_litter_size_weaning + Foster_litter_size_weaning"
@@ -43,6 +42,9 @@ null_formula = paste0("Final_weight ~ ", fixed_term)
 null_random_formula = paste(null_formula, random_term, sep = " + ")
 marker_formula = paste(null_formula, marker_term, sep = " + ")
 marker_random_formula = paste(null_random_formula, marker_term, sep = " + ")
+
+ids = as.character(data$ID)
+Af6 = A[ids, ids]
 
 ped2$animal <- as.factor(ped2$ID)
 prior_uni <- list(G = list(G1 = list(V = 1, nu = 0.002)),
@@ -60,20 +62,25 @@ marker_mcmc = MCMCglmm(as.formula(marker_formula),
 summary(null_mcmc)
 summary(marker_mcmc)
 
-var(lm(as.formula(null_formula), data = data) %>% residuals)
-null_lm = relmatLmer(as.formula(null_random_formula),   data = data, relmat = list(ID = A), REML=F,
-                     control = lmerControl(calc.derivs = FALSE))
-mark_lm = relmatLmer(as.formula(marker_random_formula), data = data, relmat = list(ID = A), REML=F,
-                     control = lmerControl(calc.derivs = FALSE))
-update_formula = paste0(". ~ . + ", marker_term)
-mark_lm = update(null_lm, as.formula(update_formula), control = lmerControl(calc.derivs = FALSE))
+install.packages("solarius")
+library(solarius)
 
+data(dat50)
+str(dat30)
+colnames(full_data_F6)
+plotKinship2(2*kin)
+M1 <- solarPolygenic(trait1 ~ age + sex, dat30)
+summary(M1)
+data_solar = full_data_F6 %>%
+  rename(famid = Litter_ID_new,
+         id = ID,
+         fa = Pat_ID,
+         mo = Mat_ID,
+         sex = Sex) %>%
+  select(famid, id, fa, mo, sex, Final_weight)
+ids = as.character(data_solar$id)
+Af6 = A[ids, ids]
+dimnames(Af6)
 
-summary(null_lm)
-summary(mark_lm)
-
-relgrad <- with(mark_lm@optinfo$derivs,solve(Hessian,gradient))
-max(abs(relgrad))
-
-lmerTest::anova(null_lm, mark_lm)
-?calcSatterth
+m2 = solarPolygenic(Final_weight ~ sex, as.data.frame(data_solar), kin = Af6)
+summary(m2)
