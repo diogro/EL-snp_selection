@@ -4,7 +4,6 @@ source("read_genotypes.R")
 library(happy)
 
 if(!require(kinship2)){install.packages("kinship2"); library(kinship2)}
-if(!require(SparseM)){install.packages("SparseM"); library(SparseM)}
 
 .n = function(x) as.numeric(as.factor(x))
 pedigree = as.data.frame(read.csv("./data/Intercross_pedigree2.csv")) %>% dplyr::rename(id = animal) %>% orderPed
@@ -26,7 +25,7 @@ h <- happy('./data/f5f6_genotypes_happy_chr6.PED', 'data/markers_strain_split_ch
            file.format = "ped",
            phase ="estimate" )
 
-marker = hdesign( h, h$markers[1], model='additive')
+marker = hdesign( h, h$markers[1000], model='additive')
 x = tbl_df(marker) %>%
   mutate(ID = as.numeric(h$subjects))
 names(full_data)
