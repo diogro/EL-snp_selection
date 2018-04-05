@@ -1,7 +1,5 @@
 source("./read_genotypes.R")
 
-gen = gen %>% filter(chr == 6)
-
 IDs = data_frame(ID = strsplit(colnames(raw_gen)[c(-(n-2), -(n-1), -n)], split = "_") %>%
                    map(1) %>%
                    unlist %>%
@@ -65,9 +63,9 @@ generateSNPentry = function(i){
 marker_entries = llply(seq_along(1:dim(strain_genotypes)[2]), generateSNPentry, .progress = "text")
 marker_entries[100]
 
-write_lines(header, "./data/markers_strain_split_chr6.txt")
-write_lines(strain_string, "./data/markers_strain_split_chr6.txt", append = TRUE)
-write_lines(marker_entries, "./data/markers_strain_split_chr6.txt", append = TRUE)
+write_lines(header, "./data/happy_markers_strain.txt")
+write_lines(strain_string, "./data/happy_markers_strain.txt", append = TRUE)
+write_lines(marker_entries, "./data/happy_markers_strain.txt", append = TRUE)
 
 f5f6_genotypes = gen %>% select(ID, chr, pos, gpos, filter(f6_snped)$pID, filter(f5_snped)$pID)
 
@@ -95,8 +93,5 @@ f5f6_happy =
   mutate(sex = as.numeric(as.factor(sex))) %>%
   dplyr::select("#Family-id", "individual-id", "mother-id", "father-id", "sex", "phenotype", df$ID)
 
-f6_happy
-
-write_tsv(f5f6_happy, "./data/f5f6_genotypes_happy_chr6.PED")
-
-system("sed -i 's/\"//g' ./data/f5f6_genotypes_happy_chr6.PED")
+write_tsv(f5f6_happy, "./data/happy_f5f6_genotypes.PED")
+system("sed -i 's/\"//g' ./data/happy_f5f6_genotypes.PED")

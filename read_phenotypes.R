@@ -21,7 +21,7 @@ full_data = read_csv("./data/Mouse phenotypes.csv") %>%
                 Weight_D0:Weight_D70, Final_weight, Liver:Fat)
 full_data$ID[full_data$ID == 3202] = 33020
 
-full_data <- mutate(full_data_F6,
+full_data <- mutate(full_data,
                     growth_D0D3   = Weight_D3 - Weight_D0,
                     growth_D3D7   = Weight_D7 - Weight_D3,
                     growth_D7D14  = Weight_D14 - Weight_D7,
