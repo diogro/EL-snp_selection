@@ -8,6 +8,7 @@ if(!require(MasterBayes)){install.packages("MasterBayes"); library(MasterBayes)}
 if(!require(tidyverse)){install.packages("tidyverse"); library(tidyverse)}
 if(!require(viridis)){install.packages("viridis"); library(viridis)}
 if(!require(cowplot)){install.packages("cowplot"); library(cowplot)}
+if(!require(QTLRel)){install.packages("QTLRel"); library(QTLRel)}
 
 n_chunks = 6
 registerDoMC(n_chunks)
