@@ -9,6 +9,8 @@ if(!require(tidyverse)){install.packages("tidyverse"); library(tidyverse)}
 if(!require(viridis)){install.packages("viridis"); library(viridis)}
 if(!require(cowplot)){install.packages("cowplot"); library(cowplot)}
 if(!require(QTLRel)){install.packages("QTLRel"); library(QTLRel)}
+if(!require(qvalue)){install.packages("qvalue"); library(qvalue)}
+if(!require(ggman)){devtools::install_github("drveera/ggman"); library(ggman)}
 
 n_chunks = 6
 registerDoMC(n_chunks)
@@ -43,18 +45,4 @@ full_data_F1 = full_data %>% filter(Gen == "F1")
 
 full_data_Strain = full_data %>% filter(Gen == "Strain")
 
-.n = function(x) as.numeric(factor(x, levels = c("M", "F")))
-pedigree = as.data.frame(read.csv("./data/Intercross_pedigree2.csv")) %>% dplyr::rename(id = animal) %>% orderPed
-ped2 = (left_join(dplyr::rename(pedigree, ID = id), dplyr::select(full_data, ID, Sex), by = "ID"))
-for(i in 1:nrow(ped2)){
-  if(is.na(ped2$Sex[i])){
-    if(ped2$ID[i] %in% ped2$dam) ped2$Sex[i] = "F"
-    else if(ped2$ID[i] %in% ped2$sire) ped2$Sex[i] = "M"
-    else ped2$Sex[i] = "M"
-  }
-}
-pedAll <- pedigree(id=ped2$ID,
-                   dadid=ped2$sire, momid=ped2$dam,
-                   sex=ped2$Sex)
-
-
+source("./create_kinship_king.R")

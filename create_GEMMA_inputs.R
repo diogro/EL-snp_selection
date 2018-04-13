@@ -1,63 +1,51 @@
 source("read_genotypes.R")
 
 f5f6_snped = inner_join(full_data_F5F6, IDs, by = "ID") %>%
-  select(pID, ID, Litter_ID_new:Mat_ID)
+  select(ID, Litter_ID_new:Mat_ID, contains("growth"), Final_weight)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
-  select(pID, ID, Litter_ID_new:Mat_ID, contains("growth"), Final_weight)
+  select(ID, Litter_ID_new:Mat_ID, contains("growth"), Final_weight)
 
-f5_snped = inner_join(full_data_F5, IDs, by = "ID") %>%
-  select(pID, ID, Litter_ID_new:Mat_ID)
+phenotypes = select(f5f6_snped, ID, Sex, Final_weight, growth_D3D7:growth_D21D28) %>% distinct(ID, .keep_all = TRUE)
 
-f6_genotypes = gen %>% select(ID, chr, pos, gpos, f6_snped$pID)
+fam_file = read_delim("./data/plink_files/atchely_imputed_thinned.fam", delim = " ",
+                      col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
 
-df_gemma = f6_genotypes %>%
-  replace(., . == "NoCall", NA) %>%
-  replace(., . == "AA", "0") %>%
-  replace(., . == "BB", "1") %>%
-  replace(., . == "AB", "0.5")
+fam_pheno = inner_join(select(fam_file, -pheno),
+                        select(phenotypes, ID, Final_weight) %>% distinct(ID, .keep_all = TRUE))
 
-for(i in 1:dim(df_gemma)[1]){
-  missing = which(is.na(df_gemma[i,]))
-  if(length(missing) > 0)
-    for(j in 1:length(missing)){
-      ind = colnames(df_gemma)[missing[j]]
-      litter = f6_snped$Litter_ID_new[f6_snped$pID == ind]
-      df_gemma[i, missing[j]] = mean(as.numeric(df_gemma[missing[j],filter(f6_snped, Litter_ID_new == litter)$pID]), na.rm = TRUE)
-    }
-}
+write_tsv(select(fam_pheno, litter, ID), "./data/gemma/keep_indviduals.txt", col_names = FALSE)
+system("plink --bfile ./data/plink_files/atchely_imputed_thinned --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/growth")
 
-phenotypes = select(f6_snped, ID, pID, Sex, growth_D3D7:growth_D14D21)
+fam_file = read_delim("./data/gemma/growth.fam", delim = " ",
+                      col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
+fam_pheno = inner_join(select(fam_file, -pheno),
+                       select(phenotypes, ID, Final_weight) %>% distinct(ID, .keep_all = TRUE))
+write_tsv(data.frame(1, fam_pheno$sex), "./data/gemma/gemma_covariates.tsv", col_names = FALSE)
+write_delim(fam_pheno, "./data/gemma/growth.fam", col_names = FALSE, delim = " ")
 
-mean_genotype = df_gemma %>%
-  mutate(chr = "B", pos = "A") %>%
-  rename(minor = chr,
-         major = pos) %>%
-  select(ID, minor, major, -gpos, f6_snped$pID)
-write_csv(mean_genotype, "./data/gemma_mean_genotype.csv", col_names = FALSE)
-write_tsv(select(phenotypes, growth_D3D7:growth_D14D21), "./data/gemma_phenotypes_growth_D2-D7-D21.tsv", col_names = FALSE)
-write_csv(select(df_gemma, ID, pos, chr), "./data/gemma_marker_position.csv", col_names = FALSE)
+system("gemma -bfile data/gemma/growth -gk 1 -o gemma_relatedness")
 
-A = 2*kinship(pedAll)
-ids = as.character(phenotypes$ID)
-Af6 = tbl_df(A[ids,ids])
-colnames(Af6) = rownames(Af6) = phenotypes$pID
-bend_Af6 = nearPD(as.matrix(Af6))
-write_tsv(tbl_df(as.matrix(bend_Af6$mat)), "./data/gemma_relatedness.tsv", col_names = FALSE)
+# A = 2*kinship(pedigree)
+# ids = as.character(fam_pheno$ID)
+# Af6 = (A[ids,ids])
+# colnames(Af6) = rownames(Af6) = phenotypes$ID
+# bend_Af6 = nearPD(as.matrix(Af6))
+# colnames(bend_Af6$mat) = rownames(bend_Af6$mat) = phenotypes$ID
+# write_tsv(tbl_df(as.matrix(bend_Af6$mat)), "./data/gemma/gemma_relatedness.tsv", col_names = FALSE)
 
-write_tsv(data.frame(1, .n(phenotypes$Sex)), "./data/gemma_covariates.tsv", col_names = FALSE)
-
-#phenotypes$animal = phenotypes$ID
-#ped2$animal = ped2$ID
-#prior_multi <- list(G = list(G1 = list(V = diag(3), nu = 4)),
-                  #R = list(V = diag(3), nu = 0.002))
-#null_mcmc = MCMCglmm(cbind(growth_D3D7, growth_D7D14, growth_D14D21) ~ trait:Sex - 1,
-                     #random = ~us(trait):animal,
-                     #rcov = ~us(trait):units,
-                     #prior = prior_multi,
-                     #family = rep("gaussian", 3),
-                     #pedigree = ped2[,c("animal", "dam", "sire")],
-                     #data = as.data.frame(phenotypes))
+# phenotypes$animal = phenotypes$ID
+# Ainv = as(base::solve(bend_Af6$mat), "dgCMatrix")
+# colnames(Ainv) = rownames(Ainv) = phenotypes$ID
+# prior_multi <- list(G = list(G1 = list(V = diag(3), nu = 4)),
+#                   R = list(V = diag(3), nu = 0.002))
+# null_mcmc = MCMCglmm(cbind(growth_D3D7, growth_D7D14, growth_D21D28) ~ trait:Sex - 1,
+#                      random = ~us(trait):animal,
+#                      rcov = ~us(trait):units,
+#                      prior = prior_multi,
+#                      family = rep("gaussian", 3),
+#                      ginverse = list(animal = Ainv),
+#                      data = as.data.frame(phenotypes))
 #summary(null_mcmc)
 #plot(null_mcmc)
 #nm = colnames(null_mcmc$VCV)
@@ -66,29 +54,27 @@ write_tsv(data.frame(1, .n(phenotypes$Sex)), "./data/gemma_covariates.tsv", col_
 #cov(phenotypes[,4:6])
 #G + R
 
-system("./gemma/gemma.linux \\
-        -g ./data/gemma_mean_genotype.csv \\
-        -p ./data/gemma_phenotypes_growth_D2-D7-D21.tsv \\
-        -a ./data/gemma_marker_position.csv \\
-        -k ./data/gemma_relatedness.tsv \\
-        -c ./data/gemma_covariates.tsv \\
-        -n 1 2 3 \\
-        -lmm 4 -o growth")
+system("gemma \\
+        -bfile ./data/gemma/growth \\
+        -k output/gemma_relatedness.cXX.txt \\
+        -c ./data/gemma/gemma_covariates.tsv \\
+        -lmm 2 \\
+        -o growth")
 
-library(devtools)
-install_github("drveera/ggman")
-library(ggman)
-if(!require(qvalue)){install.packages("qvalue"); library(qvalue)}
+gwas = read_tsv("./output/growth.assoc.txt")
 
-gwas = read_tsv("./gemma/output/output.csv.assoc.txt")
+hist(gwas$p_lrt, breaks = 100)
+plot(stats::ppoints(nrow(gwas))~sort(gwas$p_lrt))
+plot(log10(gwas$p_lrt)~lrt$p)
 
-qvalue_correction = qvalue(gwas$p_wald, fdr.level = 0.05)
+qvalue_correction = qvalue(gwas$p_lrt, fdr.level = 0.05)
 gwas = gwas %>%
           mutate(qvalues = qvalue_correction$qvalues,
                  significant = qvalue_correction$significant)
+table(gwas$significant)
 
-gwas_final_weight = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "qvalues", relative.positions = TRUE, title = "Final Weight", sigLine = 1.3)
-
+(gwas_growth_p_lrt = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "Growth 3 intervals", sigLine = 4))
+(gwas_growth_qvalue = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "qvalues", relative.positions = TRUE, title = "Growth 3 intervals"))
 
 save_plot("~/Dropbox/labbio/data/Atchley project/Genotypes/final_weight_gwas.png", gwas_growth, base_height = 6, base_aspect_ratio = 2)
 
