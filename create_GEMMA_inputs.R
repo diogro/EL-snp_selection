@@ -6,7 +6,7 @@ f5f6_snped = inner_join(full_data_F5F6, IDs, by = "ID") %>%
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
   select(ID, Litter_ID_new:Mat_ID, contains("growth"), Final_weight)
 
-phenotypes = select(f5f6_snped, ID, Sex, Final_weight, growth_D3D7:growth_D21D28) %>% distinct(ID, .keep_all = TRUE)
+phenotypes = select(f6_snped, ID, Sex, Final_weight, growth_D3D7:growth_D21D28) %>% distinct(ID, .keep_all = TRUE)
 
 fam_file = read_delim("./data/plink_files/atchely_imputed_thinned.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
@@ -63,17 +63,13 @@ system("gemma \\
 
 gwas = read_tsv("./output/growth.assoc.txt")
 
-hist(gwas$p_lrt, breaks = 100)
-plot(stats::ppoints(nrow(gwas))~sort(gwas$p_lrt))
-plot(log10(gwas$p_lrt)~lrt$p)
-
 qvalue_correction = qvalue(gwas$p_lrt, fdr.level = 0.05)
 gwas = gwas %>%
           mutate(qvalues = qvalue_correction$qvalues,
                  significant = qvalue_correction$significant)
-table(gwas$significant)
+table(gwas$p_lrt < 1e-3)
 
-(gwas_growth_p_lrt = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "Growth 3 intervals", sigLine = 4))
+(gwas_growth_p_lrt = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "Growth 3 intervals", sigLine = 3))
 (gwas_growth_qvalue = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "qvalues", relative.positions = TRUE, title = "Growth 3 intervals"))
 
 save_plot("~/Dropbox/labbio/data/Atchley project/Genotypes/final_weight_gwas.png", gwas_growth, base_height = 6, base_aspect_ratio = 2)
