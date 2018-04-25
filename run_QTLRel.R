@@ -34,8 +34,9 @@ map = gen %>%
          dist = gpos,
          phyPos = pos)
 
-idcf = cic(pedigree, phenotypes$ID, df = 1, ask = TRUE, msg = TRUE)
-save(idcf, file = "./data/qtlrel/idcf_F6.Rdata")
+#idcf = cic(pedigree, phenotypes$ID, df = 1, ask = TRUE, msg = TRUE)
+#save(idcf, file = "./data/qtlrel/idcf_F6.Rdata")
+load("./data/qtlrel/idcf_F6.Rdata")
 gmF6 <- genMatrix(idcf)
 
 idx <- !is.na(phenotypes$Final_weight)
@@ -54,11 +55,16 @@ lrt <- scanOne(y=pdatTmp$Final_weight,
                x=pdatTmp$Sex,
                gdat=gdatTmp,
                vc=vc,
-               test = "None")
+               test = "Chisq")
 
-lrt$p
+plot(-log10(lrt$p))
+plot(-log10(gwas_rped$p_lrt))
 plot(lrt,gmap=map,main="Body Weight")
 plotit(lrt$p)
+
+plot((lrt$p)~(gwas_rped$p_lrt))
+plot(obs_rped, obs_qtl_rel)
+abline(0, 1)
 
 plot(sort(lrt$p)~stats::ppoints(nrow(gwas)))
 abline(0, 1)
@@ -70,7 +76,7 @@ Tmp<- data.frame(chr=map$chr[idx],
 Tmp$chr <- reorder(Tmp$chr)
 Tmp <- Tmp[order(Tmp$chr,Tmp$dist),] # order by chromosome and distance
 
-plotit(Tmp, cv=12, main="Mapping Plot of Body Weight", xlab="Chromosome",
+plotit(Tmp, cv=5, main="Mapping Plot of Body Weight", xlab="Chromosome",
        ylab="LRT", col=as.integer(Tmp$ch)%%2+2,type="p",lty=2)
 
 null_sims = nullSim(y=pdatTmp$Final_weight,

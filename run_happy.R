@@ -3,28 +3,25 @@ source("read_genotypes.R")
 #detach("package:happy", unload = TRUE)
 library(happy)
 
-if(!require(kinship2)){install.packages("kinship2"); library(kinship2)}
-
-.n = function(x) as.numeric(as.factor(x))
-pedigree = as.data.frame(read.csv("./data/Intercross_pedigree2.csv")) %>% dplyr::rename(id = animal) %>% orderPed
-ped2 = (left_join(dplyr::rename(pedigree, ID = id), dplyr::select(full_data, ID, Sex), by = "ID"))
-for(i in 1:nrow(ped2)){
-  if(is.na(ped2$Sex[i])){
-    if(ped2$ID[i] %in% ped2$dam) ped2$Sex[i] = "F"
-    else if(ped2$ID[i] %in% ped2$sire) ped2$Sex[i] = "M"
-    else ped2$Sex[i] = "M"
-  }
-}
-pedAll <- pedigree(id=ped2$ID,
-                   dadid=ped2$sire, momid=ped2$dam,
-                   sex=ped2$Sex)
-A = Matrix(2*kinship(pedAll), sparse = TRUE)
-
-h <- happy('./data/f5f6_genotypes_happy_chr6.PED', 'data/markers_strain_split_chr6.txt',
+h <- happy('./data/happy_f6_genotypes.PED', 'data/happy_markers_strain.txt',
            generations=6,
            file.format = "ped",
            phase ="estimate" )
 
+gwas_happy = hfit(h)
+
+gwas_happy$model
+gwas_table_happy = tbl_df(gwas_happy$table)
+gwas_table_happy$logP = as.numeric(gwas_table_happy$`additive logP`)
+names(gwas_table_happy)[2] = "rs"
+gwh = inner_join(gwas_rsnp, select(gwas_table_happy, rs, logP), by = "rs")
+gwh[is.na(gwh)] = 0
+gwh$p = exp(-gwh$logP)
+
+
+
+plot(gwas_happy)
+happy::happyplot(gwas_happy)
 marker = hdesign( h, h$markers[1000], model='additive')
 x = tbl_df(marker) %>%
   mutate(ID = as.numeric(h$subjects))

@@ -1,32 +1,25 @@
 source("./read_genotypes.R")
 
-IDs = data_frame(ID = strsplit(colnames(raw_gen)[c(-(n-2), -(n-1), -n)], split = "_") %>%
-                   map(1) %>%
-                   unlist %>%
-                   as.numeric,
-                 pID = colnames(raw_gen)[c(-(n-2), -(n-1), -n)])
-
 pat_snped = inner_join(full_data_Strain, IDs, by = "ID") %>%
-  dplyr::select(pID, ID, Strain, Litter_ID_new:Mat_ID)
+  dplyr::select(ID, Strain, Litter_ID_new:Mat_ID)
 
 f5f6_snped = inner_join(full_data_F5F6, IDs, by = "ID") %>%
-  select(pID, ID, Litter_ID_new:Mat_ID)
+  select(ID, Litter_ID_new:Mat_ID)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
-  select(pID, ID, Litter_ID_new:Mat_ID)
+  select(ID, Litter_ID_new:Mat_ID)
 
 f5_snped = inner_join(full_data_F5, IDs, by = "ID") %>%
-  select(pID, ID, Litter_ID_new:Mat_ID)
+  select(ID, Litter_ID_new:Mat_ID)
 
 f1_snped = inner_join(full_data_F1, IDs, by = "ID") %>%
-  select(pID, ID, Litter_ID_new:Mat_ID)
+  select(ID, Litter_ID_new:Mat_ID)
 
-pat_gen = gen %>%
-  dplyr::select(ID, chr, pos, gpos, pat_snped$pID)
-ggplot(pat_gen, aes(x = gpos, y = chr)) + geom_point(size = 0.3, alpha = 0.5)
+pat_gen = gen %>% dplyr::select(ID, chr, pos, gpos, as.character(pat_snped$ID))
+
 current_line = line_order[2]
 getConsensusCall = function(current_line){
-  current_line_gen = gen %>% dplyr::select(ID, chr, pos, gpos, filter(pat_snped, Strain == current_line)$pID)
+  current_line_gen = gen %>% dplyr::select(ID, chr, pos, gpos, as.character(filter(pat_snped, Strain == current_line)$ID))
   getConsensusCallPerSnp = function(current_snp){
     x = current_snp[-c(1, 2, 3, 4)]
     tx = table(x)
@@ -43,9 +36,9 @@ NA_string = paste0("allele NA ", paste(rep(1/6, 6), collapse = " "))
 generateSNPentry = function(i){
   current_snp_ID = pat_gen[i,1:4]
   current_snp = strain_genotypes[,i]
-  (hasAA = current_snp == "AA")
-  (hasBB = current_snp == "BB")
-  (hasAB = current_snp == "AB")
+  (hasAA = current_snp == "0/0")
+  (hasBB = current_snp == "1/1")
+  (hasAB = current_snp == "0/1")
   hasA = (map2_lgl(hasAA, hasAB, `|`))
   hasB = (map2_lgl(hasBB, hasAB, `|`))
   nA = sum(hasA)
@@ -56,8 +49,8 @@ generateSNPentry = function(i){
   rowB[hasB] = 1/nB
   out = paste0("marker ", current_snp_ID$ID, " 3 ", current_snp_ID$gpos, "\n",
                NA_string, "\n",
-               "allele A ", paste(rowA, collapse = " "), "\n",
-               "allele B ", paste(rowB, collapse = " "))
+               "allele 0 ", paste(rowA, collapse = " "), "\n",
+               "allele 1 ", paste(rowB, collapse = " "))
   return(out)
 }
 marker_entries = llply(seq_along(1:dim(strain_genotypes)[2]), generateSNPentry, .progress = "text")
@@ -67,23 +60,24 @@ write_lines(header, "./data/happy_markers_strain.txt")
 write_lines(strain_string, "./data/happy_markers_strain.txt", append = TRUE)
 write_lines(marker_entries, "./data/happy_markers_strain.txt", append = TRUE)
 
-f5f6_genotypes = gen %>% select(ID, chr, pos, gpos, filter(f6_snped)$pID, filter(f5_snped)$pID)
+f6_genotypes = gen %>% select(ID, chr, pos, gpos, as.character(f6_snped$ID))
 
-df = f5f6_genotypes[,-c(2:4)] %>%
-  replace(., . == "NoCall", "NA\tNA") %>%
-  replace(., . == "AA", "A\tA") %>%
-  replace(., . == "BB", "B\tB") %>%
-  replace(., . == "AB", "A\tB")
+df = f6_genotypes[,-c(2:4)] %>%
+  replace(., . == "./.", "NA\tNA") %>%
+  replace(., . == "0/0", "0\t0") %>%
+  replace(., . == "1/1", "1\t1") %>%
+  replace(., . == "0/1", "0\t1")
 
 t.df = df %>%
   gather(var, value, -ID) %>%
   spread(ID, value)
 t.df = t.df %>%
-  rename(pID = var)
+  rename(ID = var) %>%
+  mutate(ID = as.numeric(ID))
 
-f5f6_happy =
-  inner_join(dplyr::select(inner_join(dplyr::select(full_data_F5F6, ID, Final_weight), f5f6_snped, by = "ID"),                                    Litter_ID_new, ID, Mat_ID, Pat_ID, Sex, pID, Final_weight),
-             t.df, by = "pID") %>%
+f6_happy =
+  inner_join(dplyr::select(inner_join(dplyr::select(full_data_F5F6, ID, Final_weight), f5f6_snped, by = "ID"),                                    Litter_ID_new, ID, Mat_ID, Pat_ID, Sex, Final_weight),
+             t.df, by = "ID") %>%
   rename("#Family-id" = Litter_ID_new,
          "individual-id" = ID,
          "mother-id" = Mat_ID,
@@ -93,5 +87,5 @@ f5f6_happy =
   mutate(sex = as.numeric(as.factor(sex))) %>%
   dplyr::select("#Family-id", "individual-id", "mother-id", "father-id", "sex", "phenotype", df$ID)
 
-write_tsv(f5f6_happy, "./data/happy_f5f6_genotypes.PED")
-system("sed -i 's/\"//g' ./data/happy_f5f6_genotypes.PED")
+write_tsv(f6_happy, "./data/happy_f6_genotypes.PED")
+system("sed -i 's/\"//g' ./data/happy_f6_genotypes.PED")

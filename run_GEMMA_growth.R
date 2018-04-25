@@ -10,13 +10,13 @@ phenotypes = select(f6_snped, ID, Sex, Final_weight,
                     Litter_size_birth,
                     Birth_litter_size_weaning,
                     Foster_litter_size_weaning,
-                    growth_D3D7:growth_D21D28) %>% distinct(ID, .keep_all = TRUE)
+                    contains("growth")) %>% distinct(ID, .keep_all = TRUE)
 
 fam_file = read_delim("./data/plink_files/per_chrom/atchely_imputed_chr1.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
 
 fam_pheno = inner_join(select(fam_file, -pheno),
-                        select(phenotypes, ID, Final_weight) %>% distinct(ID, .keep_all = TRUE))
+                        select(phenotypes, ID, contains("growth")) %>% distinct(ID, .keep_all = TRUE))
 
 write_tsv(select(fam_pheno, litter, ID), "./data/gemma/keep_indviduals.txt", col_names = FALSE)
 for(i in 1:20){
@@ -28,7 +28,7 @@ fam_file = read_delim("./data/gemma/growth_chr1.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
 fam_pheno = inner_join(select(fam_file, -pheno),
                        select(phenotypes, ID,
-                              Final_weight,
+                              contains("growth"),
                               Litter_size_birth,
                               Birth_litter_size_weaning,
                               Foster_litter_size_weaning) %>% distinct(ID, .keep_all = TRUE))
@@ -37,25 +37,23 @@ write_tsv(data.frame(1, fam_pheno$sex,
                      fam_pheno$Birth_litter_size_weaning,
                      fam_pheno$Foster_litter_size_weaning), "./data/gemma/gemma_covariates.tsv", col_names = FALSE)
 for(i in 1:20){
-  write_delim(select(fam_pheno, litter:Final_weight), paste0("./data/gemma/growth_chr", i, ".fam"), col_names = FALSE, delim = " ")
-  write_delim(select(fam_pheno, litter:Final_weight), paste0("./data/gemma/growth_not_chr", i, ".fam"), col_names = FALSE, delim = " ")
+  write_delim(select(fam_pheno, litter:growth_D49D56), paste0("./data/gemma/growth_chr", i, ".fam"), col_names = FALSE, delim = " ")
+  write_delim(select(fam_pheno, litter:growth_D49D56), paste0("./data/gemma/growth_not_chr", i, ".fam"), col_names = FALSE, delim = " ")
 }
 
 
-for(i in 1:20){
+foreach(i=1:20) %dopar% {
   system(paste0("gemma -bfile data/gemma/growth_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
   rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
-  diag(rel_mat) = diag(rel_mat) + 1e-4
+  diag(rel_mat) = diag(rel_mat) + 1e-3
   write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
 }
 system("gemma -bfile data/gemma/growth -gk 1 -o gemma_relatedness_chr")
 
-
-
 A = 2*kinship(pedigree)
 ids = as.character(fam_pheno$ID)
 Af6 = (A[ids,ids])
-Af6 = Af6 + diag(nrow(Af6)) * 1e-4
+Af6 = Af6 + diag(nrow(Af6)) * 1e-3
 colnames(Af6) = rownames(Af6) = phenotypes$ID
 bend_Af6 = nearPD(as.matrix(Af6))
 colnames(bend_Af6$mat) = rownames(bend_Af6$mat) = phenotypes$ID
@@ -81,37 +79,33 @@ write_tsv(tbl_df(as.matrix(bend_Af6$mat)), "./data/gemma/gemma_relatedness.tsv",
 #cov(phenotypes[,4:6])
 #G + R
 
-for(i in 1:20){
+library(foreach)
+library(doMC)
+registerDoMC(10)
+foreach(i=1:20) %dopar% {
 system(paste0("gemma \\
         -bfile ./data/gemma/growth_chr", i," \\
         -k output/gemma_relatedness_chr", i, ".cXX.txt \\
         -c ./data/gemma/gemma_covariates.tsv \\
         -lmm 2 \\
+        -n 1 2 3 \\
         -o growth_r-snp_chr", i))
+  sprintf("SNP LOCO %d, traits 1-5", i)
 }
 
-for(i in 1:20){
+foreach(i=1:20) %dopar% {
   system(paste0("gemma \\
         -bfile ./data/gemma/growth_chr", i," \\
         -k data/gemma/gemma_relatedness.tsv \\
         -c ./data/gemma/gemma_covariates.tsv \\
         -lmm 2 \\
+        -n 1 2 3 \\
         -o growth_r-ped_chr", i))
-}
-
-for(i in 1:20){
-  system(paste0("gemma \\
-        -bfile ./data/gemma/growth_chr", i," \\
-        -c ./data/gemma/gemma_covariates.tsv \\
-        -lm 2 \\
-        -o growth_lm_chr", i))
+  sprintf("Ped %d, traits 1-5", i)
 }
 
 gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-snp_chr",i,".assoc.txt")))
 gwas_rped = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-ped_chr",i,".assoc.txt")))
-gwas_lm   = ldply(1:20, function(i) read_tsv(paste0("./output/growth_lm_chr",i,".assoc.txt")))
-
-gwas_qtl_rel = data.frame(rs = names(lrt$p), p_lrt = lrt$p, ps = map$phyPos, chr = map$chr)
 
 qvalue_correction = qvalue(gwas_rsnp$p_lrt, fdr.level = 0.01)
 gwas_rsnp = gwas_rsnp %>%
@@ -141,14 +135,13 @@ plot.inflation <- function (x, size = 2) {
 }
 
 plot.inflation(gwas_rped$p_lrt)
+plot.inflation(gwas_rsnp$p_lrt)
 
 table(gwas$p_lrt < 1e-6)
 table(gwas$significant)
 hist(gwas_rped$p_lrt)
 obs_rsnp      = -log10(sort(gwas_rsnp$p_lrt))
 obs_rped      = -log10(sort(gwas_rped$p_lrt))
-obs_lm        = -log10(sort(gwas_lm$p_lrt))
-obs_qtl_rel   = -log10(sort(lrt$p))
 obs_happy     = -log10(sort(gwh$p))
 expected = -log10(stats::ppoints(nrow(gwas_rsnp)))
 exp_happy =-log10(stats::ppoints(nrow(gwh)))
@@ -166,12 +159,12 @@ hist(gwas_rped$p_lrt)
 
 table(gwas_rped$p_lrt < 5.17E-7)
 gwas_rped[which(gwas_rped$p_lrt < 5.17E-7),]
-(gwas_growth_p_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped BWT", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_growth_p_snp = ggman(gwas_rsnp, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp BWT", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_growth_p_qtlRel = ggman(gwas_qtl_rel, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "QTL Rel BWT", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_growth_p_happy = ggman(gwh, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p", relative.positions = TRUE, title = "Happy BWT", sigLine = -log10(2.6e-5), pointSize = 1))
+(gwas_growth_p_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped growth", sigLine = -log10(2.6e-5), pointSize = 1))
+(gwas_growth_p_snp = ggman(gwas_rsnp, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
+(gwas_growth_p_qtlRel = ggman(gwas_qtl_rel, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "QTL Rel growth", sigLine = -log10(2.6e-5), pointSize = 1))
+(gwas_growth_p_happy = ggman(gwh, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p", relative.positions = TRUE, title = "Happy growth", sigLine = -log10(2.6e-5), pointSize = 1))
 
-(gwas_growth_qvalue = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "qvalues", relative.positions = TRUE, title = "Growth 3 intervals"))
+(gwas_growth_qvalue = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "qvalues", relative.positions = TRUE, title = "growth 3 intervals"))
 
 save_plot("~/Dropbox/labbio/data/Atchley project/Genotypes/final_weight_gwas.png", gwas_growth, base_height = 6, base_aspect_ratio = 2)
 

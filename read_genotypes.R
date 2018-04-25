@@ -2,7 +2,8 @@ source("./read_phenotypes.R")
 
 #raw_gen = read_table2("./data/filtered_atchley_genotypes_raw.txt", comment = "#")[-1]
 #raw_gen2 = read_table2("./data/plink_files/missing.vcf", comment = "##") %>% arrange(`#CHROM`, POS)
-raw_gen = read_table2("./data/plink_files/atchely_imputed_text_thinned.vcf", comment = "##") %>% arrange(`#CHROM`, POS)
+raw_gen = read_table2("./data/plink_files/atchley_imputed_text.vcf", comment = "##") %>% arrange(`#CHROM`, POS)
+
 colnames(raw_gen)[-c(1:9)] = as.character(as.numeric(colnames(raw_gen)[-c(1:9)]))
 
 tail(colnames(raw_gen))

@@ -45,4 +45,4 @@ full_data_F1 = full_data %>% filter(Gen == "F1")
 
 full_data_Strain = full_data %>% filter(Gen == "Strain")
 
-source("./create_kinship_king.R")
+#source("./create_kinship_king.R")
