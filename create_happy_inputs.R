@@ -60,9 +60,9 @@ write_lines(header, "./data/happy_markers_strain.txt")
 write_lines(strain_string, "./data/happy_markers_strain.txt", append = TRUE)
 write_lines(marker_entries, "./data/happy_markers_strain.txt", append = TRUE)
 
-f6_genotypes = gen %>% select(ID, chr, pos, gpos, as.character(f6_snped$ID))
+f5f6_genotypes = gen %>% select(ID, chr, pos, gpos, as.character(f5_snped$ID), as.character(f6_snped$ID))
 
-df = f6_genotypes[,-c(2:4)] %>%
+df = f5f6_genotypes[,-c(2:4)] %>%
   replace(., . == "./.", "NA\tNA") %>%
   replace(., . == "0/0", "0\t0") %>%
   replace(., . == "1/1", "1\t1") %>%
@@ -75,7 +75,7 @@ t.df = t.df %>%
   rename(ID = var) %>%
   mutate(ID = as.numeric(ID))
 
-f6_happy =
+f5f6_happy =
   inner_join(dplyr::select(inner_join(dplyr::select(full_data_F5F6, ID, Final_weight), f5f6_snped, by = "ID"),                                    Litter_ID_new, ID, Mat_ID, Pat_ID, Sex, Final_weight),
              t.df, by = "ID") %>%
   rename("#Family-id" = Litter_ID_new,
@@ -87,5 +87,5 @@ f6_happy =
   mutate(sex = as.numeric(as.factor(sex))) %>%
   dplyr::select("#Family-id", "individual-id", "mother-id", "father-id", "sex", "phenotype", df$ID)
 
-write_tsv(f6_happy, "./data/happy_f6_genotypes.PED")
-system("sed -i 's/\"//g' ./data/happy_f6_genotypes.PED")
+write_tsv(f5f6_happy, "./data/happy_f5f6_genotypes.PED")
+system("sed -i 's/\"//g' ./data/happy_f5f6_genotypes.PED")

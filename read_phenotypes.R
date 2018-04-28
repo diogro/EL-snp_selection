@@ -9,7 +9,7 @@ if(!require(tidyverse)){install.packages("tidyverse"); library(tidyverse)}
 if(!require(viridis)){install.packages("viridis"); library(viridis)}
 if(!require(cowplot)){install.packages("cowplot"); library(cowplot)}
 if(!require(QTLRel)){install.packages("QTLRel"); library(QTLRel)}
-if(!require(qvalue)){install.packages("qvalue"); library(qvalue)}
+if(!require(qvalue)){biocLite("qvalue"); library(qvalue)}
 if(!require(ggman)){devtools::install_github("drveera/ggman"); library(ggman)}
 
 n_chunks = 6

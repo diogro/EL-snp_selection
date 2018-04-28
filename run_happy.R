@@ -3,16 +3,22 @@ source("read_genotypes.R")
 #detach("package:happy", unload = TRUE)
 library(happy)
 
-h <- happy('./data/happy_f6_genotypes.PED', 'data/happy_markers_strain.txt',
-           generations=6,
+f5f6_h <- happy('./data/happy_f5f6_genotypes.PED', 'data/happy_markers_strain.txt',
+           generations=10,
            file.format = "ped",
            phase ="estimate" )
+f6_h <- happy('./data/happy_f6_genotypes.PED', 'data/happy_markers_strain.txt',
+           generations=10,
+           file.format = "ped",
+           phase ="estimate" )
+gwas_happy_f5f6 = hfit(f5f6_h)
+gwas_happy_f6 = hfit(f6_h)
+save(f5f6_h, f6_h, gwas_happy_f5f6, gwas_happy_f6, file = "./data/HAPPY_f5f6_f6.Rdata")
 
-gwas_happy = hfit(h)
-
-gwas_happy$model
-gwas_table_happy = tbl_df(gwas_happy$table)
+gwas_happy_f5f6$model
+gwas_table_happy = tbl_df(gwas_happy_f5f6$table)
 gwas_table_happy$logP = as.numeric(gwas_table_happy$`additive logP`)
+arrange(gwas_table_happy, logP)
 names(gwas_table_happy)[2] = "rs"
 gwh = inner_join(gwas_rsnp, select(gwas_table_happy, rs, logP), by = "rs")
 gwh[is.na(gwh)] = 0

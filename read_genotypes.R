@@ -62,7 +62,7 @@ for(i in 1:nrow(ped2)){
   }
 }
 
-pedAll <- pedigree(id=ped2$ID,
-                   dadid=ped2$sire, momid=ped2$dam,
-                   sex=ped2$Sex)
+#pedAll <- pedigree(id=ped2$ID,
+                   #dadid=ped2$sire, momid=ped2$dam,
+                   #sex=ped2$Sex)
 
