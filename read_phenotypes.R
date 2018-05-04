@@ -18,11 +18,13 @@ registerDoMC(n_chunks)
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
 
 full_data = read_csv("./data/Mouse phenotypes.csv") %>%
-  dplyr::select(Litter_ID_new:Sex,
-                Gen, Pat_ID, Mat_ID, Nurse_ID, Strain, Litter_size_birth,
-                Birth_litter_size_weaning, Foster_litter_size_weaning,
-                Weight_D0:Weight_D70, Final_weight, Liver:Fat)
-full_data$ID[full_data$ID == 3202] = 33020
+    mutate(ID = as.character(ID)) %>%
+    dplyr::select(ID, Litter_ID_new:Sex,
+                  Gen, Pat_ID, Mat_ID, Nurse_ID, Strain, Litter_size_birth,
+                  Birth_litter_size_weaning, Foster_litter_size_weaning,
+                  Weight_D0:Weight_D70, Final_weight, Liver:Fat)
+
+    full_data$ID[full_data$ID == 3202] = 33020
 
 full_data <- mutate(full_data,
                     growth_D0D3   = Weight_D3 - Weight_D0,
