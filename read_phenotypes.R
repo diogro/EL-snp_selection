@@ -10,7 +10,7 @@ if(!require(viridis)){install.packages("viridis"); library(viridis)}
 if(!require(cowplot)){install.packages("cowplot"); library(cowplot)}
 if(!require(QTLRel)){install.packages("QTLRel"); library(QTLRel)}
 if(!require(qvalue)){source("https://bioconductor.org/biocLite.R"); biocLite("qvalue"); library(qvalue)}
-if(!require(ggman)){devtools::install_github("drveera/ggman"); library(ggman)}
+#if(!require(ggman)){devtools::install_github("drveera/ggman"); library(ggman)}
 
 n_chunks = 6
 registerDoMC(n_chunks)
