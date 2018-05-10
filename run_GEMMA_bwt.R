@@ -12,16 +12,17 @@ phenotypes = select(f6_snped, ID, Sex, Final_weight,
                     Foster_litter_size_weaning,
                     growth_D3D7:growth_D21D28) %>% distinct(ID, .keep_all = TRUE)
 
-fam_file = read_delim("./data/plink_files/per_chrom/atchely_imputed_autossomal_thinned_chr1.fam", delim = " ",
+fam_file = read_delim("./data/plink_files/per_chrom/atchley_imputed_chr1.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
 
 fam_pheno = inner_join(select(fam_file, -pheno),
                         select(phenotypes, ID, Final_weight) %>% distinct(ID, .keep_all = TRUE))
 
 write_tsv(select(fam_pheno, litter, ID), "./data/gemma/keep_indviduals.txt", col_names = FALSE)
-for(i in 1:19){
-  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchely_imputed_autossomal_thinned_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt_chr", i))
-  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchely_imputed_autossomal_thinned_not_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt_not_chr", i))
+system("plink --bfile ./data/plink_files/atchley_imputed_pruned --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt")
+for(i in 1:20){
+  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchley_imputed_pruned_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt_chr", i))
+  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchley_imputed_pruned_not_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt_not_chr", i))
 }
 
 fam_file = read_delim("./data/gemma/bwt_chr1.fam", delim = " ",
@@ -40,15 +41,16 @@ for(i in 1:20){
   write_delim(select(fam_pheno, litter:Final_weight), paste0("./data/gemma/bwt_chr", i, ".fam"), col_names = FALSE, delim = " ")
   write_delim(select(fam_pheno, litter:Final_weight), paste0("./data/gemma/bwt_not_chr", i, ".fam"), col_names = FALSE, delim = " ")
 }
+write_delim(select(fam_pheno, litter:Final_weight), "./data/gemma/bwt.fam", col_names = FALSE, delim = " ")
 
 
-for(i in 1:20){
+foreach(i=1:20) %dopar% {
   system(paste0("gemma -bfile data/gemma/bwt_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
-  rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
-  diag(rel_mat) = diag(rel_mat) + 1e-4
-  write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
+  #rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cxx.txt"), delim = "\t", col_names = false))
+  #diag(rel_mat) = diag(rel_mat) + 1e-4
+  #write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
 }
-#system("gemma -bfile data/gemma/bwt -gk 1 -o gemma_relatedness_chr")
+system("gemma -bfile data/gemma/bwt -gk 1 -o gemma_relatedness")
 
 A = 2*kinship(pedigree)
 ids = as.character(fam_pheno$ID)
@@ -91,6 +93,15 @@ system(paste0("gemma \\
         -o bwt_r-snp_chr", i))
 }
 
+foreach(i=1:20) %dopar% {
+system(paste0("gemma \\
+        -bfile ./data/gemma/bwt_chr", i," \\
+        -k output/gemma_relatedness.cXX.txt \\
+        -c ./data/gemma/gemma_covariates.tsv \\
+        -lmm 2 \\
+        -o bwt_r-snp_chr", i))
+}
+
 foreach(i=1:19) %dopar% {
   system(paste0("gemma \\
         -bfile ./data/gemma/bwt_chr", i," \\
@@ -108,7 +119,7 @@ for(i in 1:20){
         -o bwt_lm_chr", i))
 }
 
-gwas_rsnp = ldply(1:19, function(i) read_tsv(paste0("./output/bwt_r-snp_chr",i,".assoc.txt")))
+gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("./output/bwt_r-snp_chr",i,".assoc.txt")))
 gwas_rped = ldply(1:19, function(i) read_tsv(paste0("./output/bwt_r-ped_chr",i,".assoc.txt")))
 gwas_lm   = ldply(1:20, function(i) read_tsv(paste0("./output/bwt_lm_chr",i,".assoc.txt")))
 
@@ -118,6 +129,7 @@ qvalue_correction = qvalue(gwas_rsnp$p_lrt, fdr.level = 0.01)
 gwas_rsnp = gwas_rsnp %>%
           mutate(qvalues = qvalue_correction$qvalues,
                  significant = qvalue_correction$significant)
+table(gwas_rsnp$significant)
 
 qvalue_correction = qvalue(gwas_rped$p_lrt, fdr.level = 0.01)
 gwas_rped = gwas_rped %>%
@@ -141,8 +153,8 @@ plot.inflation <- function (x, size = 2) {
            theme(axis.line = element_blank()))
 }
 
-plot.inflation(gwas_rsnp$p_lrt)
-plot.inflation(gwas_rped$p_lrt)
+inflation = plot.inflation(gwas_rsnp$p_lrt)
+save_plot("./data/gemma/figures/rsnp_inflation.png", inflation)
 
 table(gwas$p_lrt < 1e-6)
 table(gwas$significant)
@@ -170,6 +182,7 @@ table(gwas_rped$p_lrt < 5.17E-7)
 gwas_rped[which(gwas_rped$p_lrt < 5.17E-7),]
 (gwas_bwt_p_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped BWT", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_bwt_p_snp = ggman(gwas_rsnp, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp BWT", sigLine = -log10(2.6e-5), pointSize = 1))
+save_plot("./data/gemma/figures/rsnp_manhattan3.png", gwas_bwt_p_snp)
 (gwas_bwt_p_qtlRel = ggman(gwas_qtl_rel, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "QTL Rel BWT", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_bwt_p_happy = ggman(gwh, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p", relative.positions = TRUE, title = "Happy BWT", sigLine = -log10(2.6e-5), pointSize = 1))
 

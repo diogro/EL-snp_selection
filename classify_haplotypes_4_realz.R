@@ -171,8 +171,6 @@ addPositions = function(x){
   x
 }
 plotHaplotype = function(hap){
-
-
   ids = c(paste(1, hap[[1]]$chr, hap[[1]]$seg, sep = "."),
           paste(2, hap[[2]]$chr, hap[[2]]$seg, sep = "."))
 
