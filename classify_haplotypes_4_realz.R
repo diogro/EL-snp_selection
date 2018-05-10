@@ -167,6 +167,7 @@ fixRecombinations = function(x){
 addPositions = function(x){
   x$start_pos = unlist(sapply(1:nrow(x), function(i) chr_maps[[x$chr[i]]][x$start[i],"pos"]))
   x$finish_pos = unlist(sapply(1:nrow(x), function(i) chr_maps[[x$chr[i]]][x$finish[i],"pos"]))
+  x$len_bp = x$finish_pos - x$start_pos
   x
 }
 plotHaplotype = function(hap){
@@ -223,25 +224,29 @@ names(founders_dict) = gen$ID
 # filter(hap[[1]], chr == 17) %>% print(n = nrow(.))
 
 require(doMC)
-registerDoMC(10)
-f6_haplotypes = llply(f6_snped$ID, classifyInd, .parallel = TRUE)
-names(f6_haplotypes) = f6_snped$ID
-f5_haplotypes = llply(f5_snped$ID, classifyInd, .parallel = TRUE)
-names(f5_haplotypes) = f5_snped$ID
+registerDoMC(80)
 f1_haplotypes = llply(f1_snped$ID, classifyInd, .parallel = TRUE)
 names(f1_haplotypes) = f1_snped$ID
+f5_haplotypes = llply(f5_snped$ID, classifyInd, .parallel = TRUE)
+names(f5_haplotypes) = f5_snped$ID
+f6_haplotypes = llply(f6_snped$ID, classifyInd, .parallel = TRUE)
+names(f6_haplotypes) = f6_snped$ID
 save(f6_haplotypes, f5_haplotypes, f1_haplotypes, file = "./data/infered_haplotypes.Rdata")
-# for(i in seq_along(f1_snped$ID)){
-#  p = plotHaplotype(f1_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F1",f1_snped$ID[[i]]))
-#  save_plot(paste0("./data/haplotype_inference_figures/f1_haplotype_ID-", f1_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-# }
-# for(i in seq_along(f6_snped$ID)){
-#   p = plotHaplotype(f6_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F6",f6_snped$ID[[i]], f6_snped$Sex[i]))
-#   save_plot(paste0("./data/haplotype_inference_figures/f6_haplotype_ID-", f6_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-# }
-# for(i in seq_along(f5_snped$ID)){
-#   p = plotHaplotype(f5_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F5",f5_snped$ID[[i]], f5_snped$Sex[i]))
-#   save_plot(paste0("./data/haplotype_inference_figures/f5_haplotype_ID-", f5_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-# }
+
+f5_haplotypes[["2078"]][[2]] %>% filter(chr == 1) %>% print(n = nrow(.))
+
+
+for(i in seq_along(f1_snped$ID)){
+ p = plotHaplotype(f1_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F1",f1_snped$ID[[i]]))
+ save_plot(paste0("./data/haplotype_inference_figures/f1_haplotype_ID-", f1_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+}
+for(i in seq_along(f6_snped$ID)){
+  p = plotHaplotype(f6_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F6",f6_snped$ID[[i]], f6_snped$Sex[i]))
+  save_plot(paste0("./data/haplotype_inference_figures/f6_haplotype_ID-", f6_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+}
+for(i in seq_along(f5_snped$ID)){
+  p = plotHaplotype(f5_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F5",f5_snped$ID[[i]], f5_snped$Sex[i]))
+  save_plot(paste0("./data/haplotype_inference_figures/f5_haplotype_ID-", f5_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+}
 
 load("./data/infered_haplotypes.Rdata")
