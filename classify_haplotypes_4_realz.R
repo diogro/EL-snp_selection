@@ -284,37 +284,7 @@ createModelMatrix = function(x){
   rownames(model) = gen$ID
   model
 }
-# f6_model_matrices = laply(f6_haplotypes, createModelMatrix, .parallel = TRUE)
-# f6_model_matrices = aperm(f6_model_matrices, c(1, 3, 2))
-# dimnames(f6_model_matrices)[[1]] = f6_snped$ID
-# save(f6_model_matrices, file = "./data/f6_model_matrices.Rdata")
-load("./data/f6_model_matrices.Rdata")
-
-null = lmer(Final_weight ~ Sex + (1|Mat_ID), data = f6_snped,  REML = FALSE)
-p_values = vector("numeric", dim(f6_model_matrices)[[3]])
-k = 1
-for(i in k:length(p_values)){
-  marker = lmer(Final_weight ~ Sex + f6_model_matrices[,,i] + (1|Mat_ID), data = f6_snped, REML = FALSE)
-  aov = anova(null, marker)
-  p_values[i] = aov$`Pr(>Chisq)`[[2]]
-  k = i
-}
-hist(p_values)
-plot(-log10(p_values))
-plot.inflation <- function (x, size = 2) {
-
-  # Get the number of p-values.
-  n <- length(x)
-
-  # Compute the negative log10(p-values), and sort them from largest
-  # to smallest.
-  y <- rev(sort(-log10(x)))
-
-  # Create the q-q plot.
-  return(ggplot(data.frame(x = -log10((1:n)/n),y = y),aes(x = x,y = y)) +
-           geom_abline(intercept = 0,slope = 1,color = "magenta") +
-           geom_point(color = "dodgerblue",shape = 20,size = 2) +
-           labs(x = "Expected -log10 p-value",y = "Observed -log10 p-value") +
-           theme(axis.line = element_blank()))
-}
-plot.inflation(p_values)
+f6_model_matrices = laply(f6_haplotypes, createModelMatrix, .parallel = TRUE)
+f6_model_matrices = aperm(f6_model_matrices, c(1, 3, 2))
+dimnames(f6_model_matrices)[[1]] = f6_snped$ID
+save(f6_model_matrices, file = "./data/f6_model_matrices.Rdata")
