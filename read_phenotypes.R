@@ -47,4 +47,24 @@ full_data_F1 = full_data %>% filter(Gen == "F1")
 
 full_data_Strain = full_data %>% filter(Gen == "Strain")
 
+.n = function(x) as.numeric(factor(x, levels = c("M", "F")))
+pedigree = as.data.frame(read.csv("./data/Intercross_pedigree2.csv")) %>% dplyr::rename(id = animal) %>% orderPed
+full_data$ID = as.numeric(full_data$ID)
+ped2 = (left_join(dplyr::rename(pedigree, ID = id), dplyr::select(full_data, ID, Sex), by = "ID"))
+full_data$ID = as.character(full_data$ID)
+missing = full_snped[!full_snped$ID %in% ped2$ID,c("ID", "Mat_ID", "Pat_ID", "Sex")]
+names(missing) = names(ped2)
+ped2 = rbind(ped2, missing) %>% orderPed
+missing_sire = data.frame(ID = unique(na.omit(ped2$sire[!ped2$sire %in% ped2$ID])), dam = NA, sire = NA, Sex = "M")
+ped2 = rbind(ped2, missing_sire) %>% orderPed
+missing_dam = data.frame(ID = unique(na.omit(ped2$dam[!ped2$dam %in% ped2$ID])), dam = NA, sire = NA, Sex = "F")
+ped2 = rbind(ped2, missing_dam) %>% orderPed
+for(i in 1:nrow(ped2)){
+  if(is.na(ped2$Sex[i])){
+    if(ped2$ID[i] %in% ped2$dam) ped2$Sex[i] = "F"
+    else if(ped2$ID[i] %in% ped2$sire) ped2$Sex[i] = "M"
+    else ped2$Sex[i] = "M"
+  }
+}
+
 #source("./create_kinship_king.R")
