@@ -67,4 +67,12 @@ for(i in 1:nrow(ped2)){
   }
 }
 
+A = 2*kinship(pedigree)
+A = A + diag(nrow(A)) * 1e-4
+ids = as.character(f6_snped$ID)
+Af6 = (A[ids,ids])
+colnames(Af6) = rownames(Af6) = f6_snped$ID
+
+
+
 #source("./create_kinship_king.R")
