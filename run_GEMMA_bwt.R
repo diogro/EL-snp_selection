@@ -14,25 +14,29 @@ phenotypes = select(f6_snped, ID, Sex, Final_weight,
 
 fam_file = read_delim("./data/plink_files/per_chrom/atchley_imputed_chr1.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
+fam_file$ID = as.character(fam_file$ID)
 
 fam_pheno = inner_join(select(fam_file, -pheno),
                         select(phenotypes, ID, Final_weight) %>% distinct(ID, .keep_all = TRUE))
+fam_file$ID = as.numeric(fam_file$ID)
 
 write_tsv(select(fam_pheno, litter, ID), "./data/gemma/keep_indviduals.txt", col_names = FALSE)
-system("plink --bfile ./data/plink_files/atchley_imputed_pruned --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt")
+system("plink --bfile ./data/plink_files/atchley_imputed --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt")
 for(i in 1:20){
-  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchley_imputed_pruned_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt_chr", i))
-  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchley_imputed_pruned_not_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt_not_chr", i))
+  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchley_imputed_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt_chr", i))
+  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchley_imputed_not_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/bwt_not_chr", i))
 }
 
 fam_file = read_delim("./data/gemma/bwt_chr1.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
+fam_file$ID = as.character(fam_file$ID)
 fam_pheno = inner_join(select(fam_file, -pheno),
                        select(phenotypes, ID,
                               Final_weight,
                               Litter_size_birth,
                               Birth_litter_size_weaning,
                               Foster_litter_size_weaning) %>% distinct(ID, .keep_all = TRUE))
+fam_pheno$ID = as.numeric(fam_pheno$ID)
 write_tsv(data.frame(1, fam_pheno$sex,
                      fam_pheno$Litter_size_birth,
                      fam_pheno$Birth_litter_size_weaning,
@@ -43,7 +47,7 @@ for(i in 1:20){
 }
 write_delim(select(fam_pheno, litter:Final_weight), "./data/gemma/bwt.fam", col_names = FALSE, delim = " ")
 
-
+registerDoMC(20)
 foreach(i=1:20) %dopar% {
   system(paste0("gemma -bfile data/gemma/bwt_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
   #rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cxx.txt"), delim = "\t", col_names = false))
@@ -56,10 +60,10 @@ A = 2*kinship(pedigree)
 ids = as.character(fam_pheno$ID)
 Af6 = (A[ids,ids])
 Af6 = Af6 + diag(nrow(Af6)) * 1e-4
-colnames(Af6) = rownames(Af6) = phenotypes$ID
+colnames(Af6) = rownames(Af6) = fam_pheno$ID
 bend_Af6 = nearPD(as.matrix(Af6))
 colnames(bend_Af6$mat) = rownames(bend_Af6$mat) = phenotypes$ID
-write_tsv(tbl_df(as.matrix(bend_Af6$mat)), "./data/gemma/gemma_relatedness.tsv", col_names = FALSE)
+write_tsv(tbl_df(as.matrix(Af6)), "./data/gemma/gemma_relatedness.tsv", col_names = FALSE)
 
 # phenotypes$animal = phenotypes$ID
 # Ainv = as(base::solve(bend_Af6$mat), "dgCMatrix")
@@ -83,14 +87,14 @@ write_tsv(tbl_df(as.matrix(bend_Af6$mat)), "./data/gemma/gemma_relatedness.tsv",
 
 library(foreach)
 library(doMC)
-registerDoMC(10)
+registerDoMC(20)
 foreach(i=1:20) %dopar% {
 system(paste0("gemma \\
         -bfile ./data/gemma/bwt_chr", i," \\
         -k output/gemma_relatedness_chr", i, ".cXX.txt \\
         -c ./data/gemma/gemma_covariates.tsv \\
         -lmm 2 \\
-        -o bwt_r-snp_chr", i))
+        -o bwt_r-LOCO_snp_chr", i))
 }
 
 foreach(i=1:20) %dopar% {
@@ -102,7 +106,7 @@ system(paste0("gemma \\
         -o bwt_r-snp_chr", i))
 }
 
-foreach(i=1:19) %dopar% {
+foreach(i=1:20) %dopar% {
   system(paste0("gemma \\
         -bfile ./data/gemma/bwt_chr", i," \\
         -k data/gemma/gemma_relatedness.tsv \\
@@ -120,7 +124,7 @@ for(i in 1:20){
 }
 
 gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("./output/bwt_r-snp_chr",i,".assoc.txt")))
-gwas_rped = ldply(1:19, function(i) read_tsv(paste0("./output/bwt_r-ped_chr",i,".assoc.txt")))
+gwas_rped = ldply(1:20, function(i) read_tsv(paste0("./output/bwt_r-ped_chr",i,".assoc.txt")))
 gwas_lm   = ldply(1:20, function(i) read_tsv(paste0("./output/bwt_lm_chr",i,".assoc.txt")))
 
 gwas_qtl_rel = data.frame(rs = names(lrt$p), p_lrt = lrt$p, ps = map$phyPos, chr = map$chr)
