@@ -33,7 +33,7 @@ full_snped = inner_join(full_data, IDs, by = "ID") %>%
   select(ID, Litter_ID_new:Mat_ID, Final_weight)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Mat_ID)
+  select(ID, Litter_ID_new:Mat_ID,Final_weight)
 
 f5_snped = inner_join(full_data_F5, IDs, by = "ID") %>%
   select(ID, Litter_ID_new:Mat_ID)
@@ -112,12 +112,18 @@ classifyInd = function(ID, join = TRUE){
     }
     out[[k]] = haplotypes
   }
-  if(join) out = lapply(out, fixRecombinations)
-  lapply(out, addPositions)
+  if(join){
+    out = lapply(out, fixRecombinations)
+    out = lapply(out, addPositions)
+  }
+  out
 }
+x = hap[[2]]
+print(filter(x, chr == 1), n = nrow(x))
 fixRecombinations = function(x){
   while(TRUE){
     recon = which(x$seg == "R")[1]
+    #if(is.na(recon)) recon = which(x$len == 1)[1]
     if(is.na(recon)) break
 
     ## Check if previous and next segments can be joined
@@ -216,35 +222,99 @@ names(founders) = line_order
 founders_dict = lapply(1:nrow(founders[[1]]), createFounderDict)
 names(founders_dict) = gen$ID
 
-# hap = classifyInd("2059", FALSE)
-# plotHaplotype(hap)
-#
-# filter(hap[[1]], chr == 17) %>% print(n = nrow(.))
-
-require(doMC)
-registerDoMC(80)
-f1_haplotypes = llply(f1_snped$ID, classifyInd, .parallel = TRUE)
-names(f1_haplotypes) = f1_snped$ID
-f5_haplotypes = llply(f5_snped$ID, classifyInd, .parallel = TRUE)
-names(f5_haplotypes) = f5_snped$ID
-f6_haplotypes = llply(f6_snped$ID, classifyInd, .parallel = TRUE)
-names(f6_haplotypes) = f6_snped$ID
-save(f6_haplotypes, f5_haplotypes, f1_haplotypes, file = "./data/infered_haplotypes.Rdata")
-
-f5_haplotypes[["2078"]][[2]] %>% filter(chr == 1) %>% print(n = nrow(.))
-
-
-for(i in seq_along(f1_snped$ID)){
- p = plotHaplotype(f1_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F1",f1_snped$ID[[i]]))
- save_plot(paste0("./data/haplotype_inference_figures/f1_haplotype_ID-", f1_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-}
-for(i in seq_along(f6_snped$ID)){
-  p = plotHaplotype(f6_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F6",f6_snped$ID[[i]], f6_snped$Sex[i]))
-  save_plot(paste0("./data/haplotype_inference_figures/f6_haplotype_ID-", f6_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-}
-for(i in seq_along(f5_snped$ID)){
-  p = plotHaplotype(f5_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F5",f5_snped$ID[[i]], f5_snped$Sex[i]))
-  save_plot(paste0("./data/haplotype_inference_figures/f5_haplotype_ID-", f5_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-}
-
+# registerDoMC(80)
+# f6_haplotypes = llply(f6_snped$ID, classifyInd, .parallel = TRUE)
+# names(f6_haplotypes) = f6_snped$ID
+# f5_haplotypes = llply(f5_snped$ID, classifyInd, .parallel = TRUE)
+# names(f5_haplotypes) = f5_snped$ID
+# f1_haplotypes = llply(f1_snped$ID, classifyInd, .parallel = TRUE)
+# names(f1_haplotypes) = f1_snped$ID
+# save(f6_haplotypes, f5_haplotypes, f1_haplotypes, file = "./data/infered_haplotypes.Rdata")
 load("./data/infered_haplotypes.Rdata")
+
+# for(i in seq_along(f1_snped$ID)){
+#  p = plotHaplotype(f1_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F1",f1_snped$ID[[i]], f1_snped$Sex[i]))
+#  save_plot(paste0("./data/haplotype_inference_figures/f1_haplotype_ID-", f1_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+# }
+# for(i in seq_along(f6_snped$ID)){
+#   p = plotHaplotype(f6_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F6",f6_snped$ID[[i]], f6_snped$Sex[i]))
+#   save_plot(paste0("./data/haplotype_inference_figures/f6_haplotype_ID-", f6_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+# }
+# for(i in seq_along(f5_snped$ID)){
+#   p = plotHaplotype(f5_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F5",f5_snped$ID[[i]], f5_snped$Sex[i]))
+#   save_plot(paste0("./data/haplotype_inference_figures/f5_haplotype_ID-", f5_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+# }
+
+compareChr = function(x, y) sum(out <- sapply(Map(intersect, lapply(x, strsplit, ":"), lapply(y, strsplit, ":")), length))/length(out)
+
+ID = "3486"
+sire_ID = as.character(pedigree[pedigree$id == as.numeric(ID),"sire"])
+dam_ID = as.character(pedigree[pedigree$id == as.numeric(ID),"dam"])
+i = 2
+for(i in 1:20){
+  sire_hap_1 = filter(f5_haplotypes[[sire_ID]][[1]], chr == i)
+  sire_hap_2 = f5_haplotypes[[sire_ID]][[2]] %>% filter(chr == i)
+  dam_hap_1 = f5_haplotypes[[dam_ID]][[1]] %>% filter(chr == i)
+  dam_hap_2 = f5_haplotypes[[dam_ID]][[2]] %>% filter(chr == i)
+  offspring_hap_1 = filter(f6_haplotypes[[ID]][[1]], chr == i)
+  offspring_hap_2 = filter(f6_haplotypes[[ID]][[2]], chr == i)
+
+  sire_seq_1 = rep(sire_hap_1$strain, as.numeric(sire_hap_1$len) + 1)
+  sire_seq_2 = rep(sire_hap_2$strain, as.numeric(sire_hap_2$len) + 1)
+  dam_seq_1 = rep(dam_hap_1$strain, as.numeric(dam_hap_1$len) + 1)
+  dam_seq_2 = rep(dam_hap_2$strain, as.numeric(dam_hap_2$len) + 1)
+  offspring_seq_1 = rep(offspring_hap_1$strain, as.numeric(offspring_hap_1$len) + 1)
+  offspring_seq_2 = rep(offspring_hap_2$strain, as.numeric(offspring_hap_2$len) + 1)
+
+  sapply(list(sire_seq_1, sire_seq_2, dam_seq_1, dam_seq_2), compareChr, offspring_seq_1)
+  sapply(list(sire_seq_1, sire_seq_2, dam_seq_1, dam_seq_2), compareChr, offspring_seq_2)
+}
+sire_hap_1 %>% print(n = nrow(.))
+
+x = f6_haplotypes[[500]]
+createModelMatrix = function(x){
+  strain_seq_1 = rep(x[[1]]$strain, as.numeric(x[[1]]$len) + 1)
+  strain_seq_2 = rep(x[[2]]$strain, as.numeric(x[[2]]$len) + 1)
+  singleMarkerLine = function(x){
+    marker_strains = strsplit(x, ":")[[1]]
+    as.numeric(line_order %in% marker_strains)/length(marker_strains)
+  }
+  model = laply(strain_seq_1, singleMarkerLine) + laply(strain_seq_2, singleMarkerLine)
+  colnames(model) = line_order
+  rownames(model) = gen$ID
+  model
+}
+# f6_model_matrices = laply(f6_haplotypes, createModelMatrix, .parallel = TRUE)
+# f6_model_matrices = aperm(f6_model_matrices, c(1, 3, 2))
+# dimnames(f6_model_matrices)[[1]] = f6_snped$ID
+# save(f6_model_matrices, file = "./data/f6_model_matrices.Rdata")
+load("./data/f6_model_matrices.Rdata")
+
+null = lmer(Final_weight ~ Sex + (1|Mat_ID), data = f6_snped,  REML = FALSE)
+p_values = vector("numeric", dim(f6_model_matrices)[[3]])
+k = 1
+for(i in k:length(p_values)){
+  marker = lmer(Final_weight ~ Sex + f6_model_matrices[,,i] + (1|Mat_ID), data = f6_snped, REML = FALSE)
+  aov = anova(null, marker)
+  p_values[i] = aov$`Pr(>Chisq)`[[2]]
+  k = i
+}
+hist(p_values)
+plot(-log10(p_values))
+plot.inflation <- function (x, size = 2) {
+
+  # Get the number of p-values.
+  n <- length(x)
+
+  # Compute the negative log10(p-values), and sort them from largest
+  # to smallest.
+  y <- rev(sort(-log10(x)))
+
+  # Create the q-q plot.
+  return(ggplot(data.frame(x = -log10((1:n)/n),y = y),aes(x = x,y = y)) +
+           geom_abline(intercept = 0,slope = 1,color = "magenta") +
+           geom_point(color = "dodgerblue",shape = 20,size = 2) +
+           labs(x = "Expected -log10 p-value",y = "Observed -log10 p-value") +
+           theme(axis.line = element_blank()))
+}
+plot.inflation(p_values)
