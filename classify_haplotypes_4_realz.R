@@ -173,11 +173,10 @@ fixRecombinations = function(x){
 addPositions = function(x){
   x$start_pos = unlist(sapply(1:nrow(x), function(i) chr_maps[[x$chr[i]]][x$start[i],"pos"]))
   x$finish_pos = unlist(sapply(1:nrow(x), function(i) chr_maps[[x$chr[i]]][x$finish[i],"pos"]))
+  x$len_bp = x$finish_pos - x$start_pos
   x
 }
 plotHaplotype = function(hap){
-
-
   ids = c(paste(1, hap[[1]]$chr, hap[[1]]$seg, sep = "."),
           paste(2, hap[[2]]$chr, hap[[2]]$seg, sep = "."))
 
