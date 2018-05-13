@@ -31,7 +31,7 @@ full_snped = inner_join(full_data, IDs, by = "ID") %>%
   select(ID, Litter_ID_new:Mat_ID, Final_weight)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Mat_ID)
+  select(ID, Litter_ID_new:Mat_ID, Final_weight)
 
 f5_snped = inner_join(full_data_F5, IDs, by = "ID") %>%
   select(ID, Litter_ID_new:Mat_ID)
@@ -67,6 +67,7 @@ A = A + diag(nrow(A)) * 1e-4
 ids = as.character(f6_snped$ID)
 Af6 = (A[ids,ids])
 colnames(Af6) = rownames(Af6) = f6_snped$ID
+load("./data/gemma_relatedness.Rdata")
 #pedAll <- pedigree(id=ped2$ID,
                    #dadid=ped2$sire, momid=ped2$dam,
                    #sex=ped2$Sex)
