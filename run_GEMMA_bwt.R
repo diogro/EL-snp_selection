@@ -115,9 +115,9 @@ foreach(i=1:20) %dopar% {
         -o bwt_r-ped_chr", i))
 }
 
-gwas_rsnp = ldply(1:19, function(i) read_tsv(paste0("./output/bwt_r-snp_chr",i,".assoc.txt")))
-gwas_rsnp_loco = ldply(1:20, function(i) read_tsv(paste0("./output/bwt_r-LOCO_snp_chr",i,".assoc.txt")))
-gwas_rped = ldply(1:19, function(i) read_tsv(paste0("./output/bwt_r-ped_chr",i,".assoc.txt")))
+gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-snp_chr",i,".assoc.txt")))
+gwas_rsnp_loco = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-LOCO_snp_chr",i,".assoc.txt")))
+gwas_rped = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-ped_chr",i,".assoc.txt")))
 
 gwas_qtl_rel = data.frame(rs = names(lrt$p), p_lrt = lrt$p, ps = map$phyPos, chr = map$chr)
 
@@ -175,9 +175,16 @@ hist(gwas_rped$p_lrt)
 
 table(gwas_rped$p_lrt < 5.17E-7)
 gwas_rped[which(gwas_rped$p_lrt < 5.17E-7),]
-(gwas_bwt_p_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped BWT", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_bwt_p_snp = ggman(gwas_rsnp_loco, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp LOCO BWT", sigLine = -log10(2.6e-5), pointSize = 1))
+gwas_bwt_GEMMA_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped BWT", sigLine = -log10(2.6e-5), pointSize = 0.5) + scale_y_continuous(limits = c(0, 13))
+gwas_bwt_GEMMA_loco = ggman(gwas_rsnp_loco, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA LOCO BWT", sigLine = -log10(2.6e-5), pointSize = 0.5) + scale_y_continuous(limits = c(0, 13))
+gwas_bwt_GEMMA_snp = ggman(gwas_rsnp, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp BWT", sigLine = -log10(2.6e-5), pointSize = 0.5) + scale_y_continuous(limits = c(0, 13))
+plot_grid(gwas_bwt_GEMMA_ped, gwas_bwt_GEMMA_snp, gwas_bwt_GEMMA_loco)
+
+
+
 save_plot("./data/gemma/figures/rsnp_manhattan3.png", gwas_bwt_p_snp)
+
+
 (gwas_bwt_p_qtlRel = ggman(gwas_qtl_rel, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "QTL Rel BWT", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_bwt_p_happy = ggman(gwh, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p", relative.positions = TRUE, title = "Happy BWT", sigLine = -log10(2.6e-5), pointSize = 1))
 
