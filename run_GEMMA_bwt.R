@@ -100,17 +100,9 @@ foreach(i=1:19) %dopar% {
         -o bwt_r-ped_chr", i))
 }
 
-for(i in 1:20){
-  system(paste0("gemma \\
-        -bfile ./data/gemma/bwt_chr", i," \\
-        -c ./data/gemma/gemma_covariates.tsv \\
-        -lm 2 \\
-        -o bwt_lm_chr", i))
-}
 
 gwas_rsnp = ldply(1:19, function(i) read_tsv(paste0("./output/bwt_r-snp_chr",i,".assoc.txt")))
 gwas_rped = ldply(1:19, function(i) read_tsv(paste0("./output/bwt_r-ped_chr",i,".assoc.txt")))
-gwas_lm   = ldply(1:20, function(i) read_tsv(paste0("./output/bwt_lm_chr",i,".assoc.txt")))
 
 gwas_qtl_rel = data.frame(rs = names(lrt$p), p_lrt = lrt$p, ps = map$phyPos, chr = map$chr)
 
@@ -149,7 +141,6 @@ table(gwas$significant)
 hist(gwas_rnsp$p_lrt)
 obs_rsnp      = -log10(sort(gwas_rsnp$p_lrt))
 obs_rped      = -log10(sort(gwas_rped$p_lrt))
-obs_lm        = -log10(sort(gwas_lm$p_lrt))
 obs_qtl_rel   = -log10(sort(lrt$p))
 obs_happy     = -log10(sort(gwh$p))
 expected = -log10(stats::ppoints(nrow(gwas_rsnp)))
