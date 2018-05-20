@@ -1,10 +1,6 @@
 source("classify_haplotypes_4_realz.R")
 source("data/LASSO_cluster/emma.r")
 
-gen2 = select(gen,  ID, chr, pos, gpos)
-rm(gen)
-gen = gen2
-gc()
 Xo <- cbind(.n(f6_snped$Sex)-1,
             scale(cbind(f6_snped$Litter_size_birth,
                   f6_snped$Birth_litter_size_weaning, f6_snped$Foster_litter_size_weaning)))
@@ -119,15 +115,14 @@ summary(lsfit(cbind(Xo_t[chr,,],X_t), Y_t[,chr], intercept = FALSE))
 
 Y = f6_snped$Final_weight
 Y[is.na(Y)] = mean(Y, na.rm = TRUE)
-library(stanAnimal)
-rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
-g = lmm_animal(Y, Xo, Af6_snp, chains = 4, iter = 2000, warmup = 1000)
-g_ped = lmm_animal(Y, Xo, Af6, chains = 4, iter = 2000, warmup = 1000)
+g = lmm_animal(Y, Xo, Af6_snp)
+g_ped = lmm_animal(Y, Xo, Af6)
 print(g, digits = 5)
 V = sapply(rstan::extract(g, pars = c("sigma_G", "sigma_E")), mean)
 V[1]/(V[1] + V[2])
 
+install.packages("pedigreemm")
 library(pedigreemm)
 ped17 <- pedigree(ped2$sire, ped2$dam, ped2$ID)  #restructure ped file
 data = data.frame(Y = Y, sex = f6_snped$Sex, ID = f6_snped$ID)

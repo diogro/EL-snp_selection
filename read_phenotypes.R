@@ -1,6 +1,7 @@
 if(!require(lme4)){install.packages("lme4"); library(lme4)}
 if(!require(lme4qtl)){devtools::install_github("variani/lme4qtl"); library(lme4qtl)}
 if(!require(lmerTest)){devtools::install_github("runehaubo/lmerTest"); library(lmerTest)}
+if(!require(stanAnimal)){devtools::install_github("diogro/stanAnimal", subdir = "package"); library(stanAnimal)}
 if(!require(plyr)){install.packages("plyr"); library(plyr)}
 if(!require(doMC)){install.packages("doMC"); library(doMC)}
 if(!require(MCMCglmm)){install.packages("MCMCglmm"); library(MCMCglmm)}
