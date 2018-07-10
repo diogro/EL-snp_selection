@@ -106,13 +106,18 @@ for(i in k:n_traits){
 
 
 save(gwas_emmax_snp, gwas_emmax_ped, gwas_emmax_loco, file = "./data/haplotype_gwas_growth.Rdata")
-(gwas_bwt_p_ped = ggman(gwas_emmax_ped[[1]], snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt",
-                        relative.positions = TRUE, title = "Hap EMMAx PED", sigLine = -log10(2.6e-5),
-                        pointSize = 1) + scale_y_continuous(limits = c(0, 13)))
-(gwas_bwt_p_snp = ggman(gwas_emmax_snp[[2]], snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt",
-                        relative.positions = TRUE, title = "Hap EMMAx SNP", sigLine = -log10(2.6e-5),
-                        pointSize = 1) + scale_y_continuous(limits = c(0, 13)))
-(gwas_bwt_p_loco = ggman(gwas_emmax_loco[[1]], snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt",
-                        relative.positions = TRUE, title = "Hap EMMAx SNP LOCO", sigLine = -log10(2.6e-5),
-                        pointSize = 1) + scale_y_continuous(limits = c(0, 13)))
-plot_grid(gwas_bwt_p_ped, gwas_bwt_p_snp, gwas_bwt_p_loco)
+gwas_emmax_plots = vector("list", length(growth_traits))
+for (i in 1:n_traits){
+  gwas_bwt_p_ped = ggman(gwas_emmax_ped[[i]], snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt",
+                         relative.positions = TRUE, title = "Hap EMMAx PED", sigLine = -log10(2.6e-5),
+                         pointSize = 1) + scale_y_continuous(limits = c(0, 13))
+  gwas_bwt_p_snp = ggman(gwas_emmax_snp[[i]], snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt",
+                         relative.positions = TRUE, title = "Hap EMMAx SNP", sigLine = -log10(2.6e-5),
+                         pointSize = 1) + scale_y_continuous(limits = c(0, 13))
+  gwas_bwt_p_loco = ggman(gwas_emmax_loco[[i]], snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt",
+                          relative.positions = TRUE, title = "Hap EMMAx SNP LOCO", sigLine = -log10(2.6e-5),
+                          pointSize = 1) + scale_y_continuous(limits = c(0, 13))
+
+  gwas_emmax_plots[[i]] = plot_grid(gwas_bwt_p_ped, gwas_bwt_p_snp, gwas_bwt_p_loco, ncol = 1)
+}
+gwas_emmax_plots[[8]]
