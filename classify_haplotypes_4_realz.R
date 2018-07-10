@@ -250,7 +250,7 @@ names(founders) = line_order
 founders_dict = lapply(1:nrow(founders[[1]]), createFounderDict)
 names(founders_dict) = gen$ID
 
-# registerDoMC(80)
+# registerDoMC(4)
 # f6_haplotypes = llply(f6_snped$ID, classifyInd, .parallel = TRUE)
 # names(f6_haplotypes) = f6_snped$ID
 # f5_haplotypes = llply(f5_snped$ID, classifyInd, .parallel = TRUE)

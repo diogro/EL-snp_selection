@@ -34,7 +34,7 @@ full_snped = inner_join(full_data, IDs, by = "ID") %>%
   select(ID, Litter_ID_new:Mat_ID, Final_weight)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Mat_ID, Final_weight)
+  select(ID, Litter_ID_new:Mat_ID, Final_weight, contains("growth"))
 
 f5_snped = inner_join(full_data_F5, IDs, by = "ID") %>%
   select(ID, Litter_ID_new:Mat_ID)
