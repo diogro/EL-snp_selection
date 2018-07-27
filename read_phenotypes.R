@@ -13,7 +13,7 @@ if(!require(QTLRel)){install.packages("QTLRel"); library(QTLRel)}
 if(!require(qvalue)){source("https://bioconductor.org/biocLite.R"); biocLite("qvalue"); library(qvalue)}
 if(!require(ggman)){devtools::install_github("drveera/ggman"); library(ggman)}
 
-registerDoMC(20)
+registerDoMC(3)
 
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
 
