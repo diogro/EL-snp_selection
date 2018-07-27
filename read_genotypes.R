@@ -11,7 +11,7 @@ n = length(colnames(raw_gen))
 
 gen = dplyr::select(raw_gen, `#CHROM`, POS, ID, everything()) %>%
   dplyr::select(-REF, -ALT, -QUAL, -FILTER, -INFO, -FORMAT) %>%
-  rename(chr = `#CHROM`,
+  dplyr::rename(chr = `#CHROM`,
          pos = POS) %>%
   arrange(chr, pos) %>%
   filter(chr != 21)
@@ -26,24 +26,24 @@ gen = inner_join(positions, gen, by = c("chr", "pos")) %>%
   dplyr::select(ID, chr, everything(), -chr2)
 
 snp_plot = ggplot(gen, aes(pos/1e6, chr)) + geom_point(size = 0.3) + labs(x = "Chromossomal position (Mb)", y = "Chromossome")
-save_plot("~/snp_pos_plot.png", snp_plot, base_height = 6, base_aspect_ratio = 1.5)
+cowplot::save_plot("~/snp_pos_plot.png", snp_plot, base_height = 6, base_aspect_ratio = 1.5)
 
 IDs = data_frame(ID = as.character(colnames(raw_gen)[-c(1:9)]))
 
 full_snped = inner_join(full_data, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight)
+  dplyr::select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight, contains("growth"))
+  dplyr::select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight, contains("growth"))
 
 f5_snped = inner_join(full_data_F5, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Mat_ID)
+  dplyr::select(ID, Litter_ID_new:Foster_litter_size_weaning)
 
 f1_snped = inner_join(full_data_F1, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Mat_ID)
+  dplyr::select(ID, Litter_ID_new:Foster_litter_size_weaning)
 
 pat_snped = inner_join(full_data_Strain, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Mat_ID)
+  dplyr::select(ID, Litter_ID_new:Foster_litter_size_weaning)
 
 .n = function(x) as.numeric(factor(x, levels = c("M", "F")))
 pedigree = as.data.frame(read.csv("./data/Intercross_pedigree2.csv")) %>% dplyr::rename(id = animal) %>% orderPed

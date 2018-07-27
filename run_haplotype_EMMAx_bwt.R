@@ -30,8 +30,6 @@ Af6_snp = A_snp[f6_snped$ID, f6_snped$ID]
 Af6_loco = A_loco[,f6_snped$ID, f6_snped$ID]
 
 source("hapGWAS.R")
-Y = f6_snped$Final_weight
-K_norm = Af6
 
 gwas_emmax_ped = hapGWAS(f6_snped$Final_weight, Af6)
 gwas_emmax_snp = hapGWAS(f6_snped$Final_weight, Af6_snp)

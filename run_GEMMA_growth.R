@@ -15,8 +15,10 @@ phenotypes = select(f6_snped, ID, Sex, Final_weight,
 fam_file = read_delim("./data/plink_files/per_chrom/atchely_imputed_chr1.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
 
+fam_file$ID = as.character(fam_file$ID)
 fam_pheno = inner_join(select(fam_file, -pheno),
                         select(phenotypes, ID, contains("growth")) %>% distinct(ID, .keep_all = TRUE))
+fam_pheno$ID = as.numeric(fam_pheno$ID)
 
 write_tsv(select(fam_pheno, litter, ID), "./data/gemma/keep_indviduals.txt", col_names = FALSE)
 for(i in 1:20){
@@ -26,12 +28,14 @@ for(i in 1:20){
 
 fam_file = read_delim("./data/gemma/growth_chr1.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
+fam_file$ID = as.character(fam_file$ID)
 fam_pheno = inner_join(select(fam_file, -pheno),
                        select(phenotypes, ID,
                               contains("growth"),
                               Litter_size_birth,
                               Birth_litter_size_weaning,
                               Foster_litter_size_weaning) %>% distinct(ID, .keep_all = TRUE))
+fam_pheno$ID = as.numeric(fam_pheno$ID)
 write_tsv(data.frame(1, fam_pheno$sex,
                      fam_pheno$Litter_size_birth,
                      fam_pheno$Birth_litter_size_weaning,
@@ -44,20 +48,18 @@ for(i in 1:20){
 
 foreach(i=1:20) %dopar% {
   system(paste0("gemma -bfile data/gemma/growth_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
-  rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
-  diag(rel_mat) = diag(rel_mat) + 1e-3
-  write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
+ # rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
+ # diag(rel_mat) = diag(rel_mat) + 1e-3
+#  write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
 }
-system("gemma -bfile data/gemma/growth -gk 1 -o gemma_relatedness_chr")
+#system("gemma -bfile data/gemma/growth -gk 1 -o gemma_relatedness_chr")
 
 A = 2*kinship(pedigree)
 ids = as.character(fam_pheno$ID)
 Af6 = (A[ids,ids])
 Af6 = Af6 + diag(nrow(Af6)) * 1e-3
 colnames(Af6) = rownames(Af6) = phenotypes$ID
-bend_Af6 = nearPD(as.matrix(Af6))
-colnames(bend_Af6$mat) = rownames(bend_Af6$mat) = phenotypes$ID
-write_tsv(tbl_df(as.matrix(bend_Af6$mat)), "./data/gemma/gemma_relatedness.tsv", col_names = FALSE)
+write_tsv(tbl_df(Af6), "./data/gemma/gemma_relatedness.tsv", col_names = FALSE)
 
 # phenotypes$animal = phenotypes$ID
 # Ainv = as(base::solve(bend_Af6$mat), "dgCMatrix")

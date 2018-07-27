@@ -119,18 +119,7 @@ gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-snp_chr",
 gwas_rsnp_loco = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-LOCO_snp_chr",i,".assoc.txt")))
 gwas_rped = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-ped_chr",i,".assoc.txt")))
 
-gwas_qtl_rel = data.frame(rs = names(lrt$p), p_lrt = lrt$p, ps = map$phyPos, chr = map$chr)
-
-qvalue_correction = qvalue(gwas_rsnp$p_lrt, fdr.level = 0.01)
-gwas_rsnp = gwas_rsnp %>%
-          mutate(qvalues = qvalue_correction$qvalues,
-                 significant = qvalue_correction$significant)
-table(gwas_rsnp$significant)
-
-qvalue_correction = qvalue(gwas_rped$p_lrt, fdr.level = 0.01)
-gwas_rped = gwas_rped %>%
-  mutate(qvalues = qvalue_correction$qvalues,
-         significant = qvalue_correction$significant)
+#was_qtl_rel = data.frame(rs = names(lrt$p), p_lrt = lrt$p, ps = map$phyPos, chr = map$chr)
 
 plot.inflation <- function (x, size = 2) {
 

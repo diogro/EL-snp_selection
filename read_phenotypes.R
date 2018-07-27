@@ -6,14 +6,15 @@ if(!require(plyr)){install.packages("plyr"); library(plyr)}
 if(!require(doMC)){install.packages("doMC"); library(doMC)}
 if(!require(MCMCglmm)){install.packages("MCMCglmm"); library(MCMCglmm)}
 if(!require(MasterBayes)){install.packages("MasterBayes"); library(MasterBayes)}
+if(!require(ggplot2)){devtools::install_github("tidyverse/ggplot2"); library(ggplot2)}
+if(!require(cowplot)){devtools::install_github("wilkelab/cowplot"); library(cowplot)}
 if(!require(tidyverse)){install.packages("tidyverse"); library(tidyverse)}
 if(!require(viridis)){install.packages("viridis"); library(viridis)}
-if(!require(cowplot)){install.packages("cowplot"); library(cowplot)}
 if(!require(QTLRel)){install.packages("QTLRel"); library(QTLRel)}
 if(!require(qvalue)){source("https://bioconductor.org/biocLite.R"); biocLite("qvalue"); library(qvalue)}
 if(!require(ggman)){devtools::install_github("drveera/ggman"); library(ggman)}
 
-registerDoMC(3)
+registerDoMC(8)
 
 line_order = c("A13", "A31", "A41", "A23", "A22", "A42")[6:1]
 
