@@ -95,29 +95,8 @@ system(paste0("gemma \\
   sprintf("SNP LOCO %d, traits 1-5", i)
 }
 
-foreach(i=1:20) %dopar% {
-  system(paste0("gemma \\
-        -bfile ./data/gemma/growth_chr", i," \\
-        -k data/gemma/gemma_relatedness.tsv \\
-        -c ./data/gemma/gemma_covariates.tsv \\
-        -lmm 2 \\
-        -n 1 2 3 \\
-        -o growth_r-ped_chr", i))
-  sprintf("Ped %d, traits 1-5", i)
-}
-
 gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-snp_chr",i,".assoc.txt")))
 gwas_rped = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-ped_chr",i,".assoc.txt")))
-
-qvalue_correction = qvalue(gwas_rsnp$p_lrt, fdr.level = 0.01)
-gwas_rsnp = gwas_rsnp %>%
-          mutate(qvalues = qvalue_correction$qvalues,
-                 significant = qvalue_correction$significant)
-
-qvalue_correction = qvalue(gwas_rped$p_lrt, fdr.level = 0.01)
-gwas_rped = gwas_rped %>%
-  mutate(qvalues = qvalue_correction$qvalues,
-         significant = qvalue_correction$significant)
 
 plot.inflation <- function (x, size = 2) {
 
@@ -139,27 +118,7 @@ plot.inflation <- function (x, size = 2) {
 plot.inflation(gwas_rped$p_lrt)
 plot.inflation(gwas_rsnp$p_lrt)
 
-table(gwas$p_lrt < 1e-6)
-table(gwas$significant)
-hist(gwas_rped$p_lrt)
-obs_rsnp      = -log10(sort(gwas_rsnp$p_lrt))
-obs_rped      = -log10(sort(gwas_rped$p_lrt))
-obs_happy     = -log10(sort(gwh$p))
-expected = -log10(stats::ppoints(nrow(gwas_rsnp)))
-exp_happy =-log10(stats::ppoints(nrow(gwh)))
-plot(obs_rped~expected, pch = 19, ylim = c(0, 15))
-points(obs_rsnp~expected, pch = 19, col = "blue")
-points(obs_qtl_rel~expected, pch = 19, col = "red")
-#points(obs_happy~exp_happy, pch = 19, col = "darkgreen")
-#points(obs_lm~expected, pch = 19, col = "orange")
-abline(0, 1)
-abline(h = -log10(5.17E-7))
-cov(-log10(gwas_rsnp$p_lrt), -log10(gwas_rped$p_lrt))
-
-hist(gwas_rsnp$p_lrt)
-hist(gwas_rped$p_lrt)
-
-table(gwas_rped$p_lrt < 5.17E-7)
+table(gwas_rsnp$p_lrt < 5.17E-7)
 gwas_rped[which(gwas_rped$p_lrt < 5.17E-7),]
 (gwas_growth_p_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped growth", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_growth_p_snp = ggman(gwas_rsnp, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
