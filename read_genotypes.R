@@ -31,10 +31,10 @@ save_plot("~/snp_pos_plot.png", snp_plot, base_height = 6, base_aspect_ratio = 1
 IDs = data_frame(ID = as.character(colnames(raw_gen)[-c(1:9)]))
 
 full_snped = inner_join(full_data, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Mat_ID, Final_weight)
+  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight)
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Mat_ID, Final_weight, contains("growth"))
+  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight, contains("growth"))
 
 f5_snped = inner_join(full_data_F5, IDs, by = "ID") %>%
   select(ID, Litter_ID_new:Mat_ID)

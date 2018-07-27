@@ -20,74 +20,7 @@ n = nrow(Af6)
 Af6_snp = A_snp[f6_snped_growth$ID, f6_snped_growth$ID]
 Af6_loco = A_loco[,f6_snped_growth$ID, f6_snped_growth$ID]
 
-hapGWAS <- function(Y, K_norm) {
-  if(any(is.na(Y))) Y[is.na(Y)] = mean(Y, na.rm = TRUE)
-  null<-emma.REMLE(Y, as.matrix(Xo), K_norm)
-
-  #EMMAX
-
-  M <- solve(chol(null$vg * K_norm + null$ve * diag(n)))
-  Y_t <- crossprod(M, Y)
-  Xo_t <- crossprod(M, Xo)
-
-  RSSf = vector("numeric", dim(f6_model_matrices)[[3]])
-  pb = txtProgressBar(min = 1, max = length(RSSf), style = 3)
-  k = 1
-  for(i in k:length(RSSf)){
-    setTxtProgressBar(pb, i)
-    X = f6_model_matrices[,,i]
-    X_t <- crossprod(M,X)
-    RSSf[i] = sum(lsfit(cbind(Xo_t,X_t),Y_t,intercept = FALSE)$residuals^2)
-  }
-  m = length(RSSf)
-  RSS_H0 <- rep(sum(lsfit(Xo_t,Y_t,intercept = FALSE)$residuals^2),m)
-  df1<-1
-  df2<-n-df1-1
-  R2<-1-1/(RSS_H0/RSSf)
-  F<-(RSS_H0/RSSf-1)*df2/df1
-  pval<-pf(F,df1,df2,lower.tail=FALSE)
-  data.frame(rs = gen$ID, ps = gen$pos, chr = gen$chr, p_lrt = pval)
-}
-hapGWASLOCO <- function(Y, K) {
-  if(any(is.na(Y))) Y[is.na(Y)] = mean(Y, na.rm = TRUE)
-
-  #EMMAX
-  null = list()
-  Y_t = array(0, dim = c(length(Y), 20))
-  Xo_t = array(0, dim = c(20, dim(Xo)))
-  M = array(0, dim = dim(K))
-  for(i in 1:20){
-    null[[i]] <- emma.REMLE(Y, as.matrix(Xo), K[i,,])
-    M[i,,] <- solve(chol(null[[i]]$vg*K[i,,]+null[[i]]$ve*diag(n)))
-    Y_t[,i] <- crossprod(M[i,,],Y)
-    Xo_t[i,,] <- crossprod(M[i,,], Xo)
-  }
-
-  RSSf = vector("numeric", dim(f6_model_matrices)[[3]])
-  pb = txtProgressBar(min = 1, max = length(RSSf), style = 3)
-  k = 1
-  for(i in k:length(RSSf)){
-    setTxtProgressBar(pb, i)
-    chr = gen$chr[i]
-    X = f6_model_matrices[,,i]
-    X_t <- crossprod(M[chr,,], X)
-    RSSf[i] = sum(lsfit(cbind(Xo_t[chr,,],X_t),Y_t[,chr],intercept = FALSE)$residuals^2)
-  }
-  m = length(RSSf)
-  H0 = vector("numeric", 20)
-  loci_per_chr = vector("numeric", 20)
-  for(i in 1:20){
-    H0[i] <- sum(lsfit(Xo_t[i,,],Y_t[,i],intercept = FALSE)$residuals^2)
-    loci_per_chr[i] = sum(gen$chr == i)
-  }
-  RSS_H0 = rep(H0, loci_per_chr)
-  df1<-1
-  df2<-n-df1-1
-  R2<-1-1/(RSS_H0/RSSf)
-  F<-(RSS_H0/RSSf-1)*df2/df1
-  pval<-pf(F,df1,df2,lower.tail=FALSE)
-  data.frame(rs = gen$ID, ps = gen$pos, chr = gen$chr, p_lrt = pval)
-}
+source("hapGWAS.R")
 
 growth_traits = colnames(select(f6_snped_growth, contains("growth")))
 n_traits = length(growth_traits)
