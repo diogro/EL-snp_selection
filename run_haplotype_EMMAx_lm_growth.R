@@ -35,7 +35,7 @@ hapGWAS <- function(Y, K_norm) {
 
   H0 <- lm(Y_t ~ Xo_t - 1)
   pval = vector("numeric", dim(f6_model_matrices)[[3]])
-  pb = txtProgressBar(min = 1, max = length(RSSf), style = 3)
+  pb = txtProgressBar(min = 1, max = length(pval), style = 3)
   k = 1
   for(i in k:length(pval)){
     setTxtProgressBar(pb, i)
