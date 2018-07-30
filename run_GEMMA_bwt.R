@@ -47,8 +47,8 @@ for(i in 1:20){
 }
 write_delim(select(fam_pheno, litter:Final_weight), "./data/gemma/bwt.fam", col_names = FALSE, delim = " ")
 
-registerDoMC(20)
-foreach(i=1:20) %dopar% {
+registerDoMC(8)
+for(i in 1:20)  {
   system(paste0("gemma -bfile data/gemma/bwt_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
   #rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cxx.txt"), delim = "\t", col_names = false))
   #diag(rel_mat) = diag(rel_mat) + 1e-4
@@ -61,8 +61,6 @@ ids = as.character(fam_pheno$ID)
 Af6 = (A[ids,ids])
 Af6 = Af6 + diag(nrow(Af6)) * 1e-4
 colnames(Af6) = rownames(Af6) = fam_pheno$ID
-bend_Af6 = nearPD(as.matrix(Af6))
-colnames(bend_Af6$mat) = rownames(bend_Af6$mat) = phenotypes$ID
 write_tsv(tbl_df(as.matrix(Af6)), "./data/gemma/gemma_relatedness.tsv", col_names = FALSE)
 
 # phenotypes$animal = phenotypes$ID
@@ -119,48 +117,6 @@ gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-snp_chr",
 gwas_rsnp_loco = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-LOCO_snp_chr",i,".assoc.txt")))
 gwas_rped = ldply(1:20, function(i) read_tsv(paste0("data/output/bwt_r-ped_chr",i,".assoc.txt")))
 
-#was_qtl_rel = data.frame(rs = names(lrt$p), p_lrt = lrt$p, ps = map$phyPos, chr = map$chr)
-
-plot.inflation <- function (x, size = 2) {
-
-  # Get the number of p-values.
-  n <- length(x)
-
-  # Compute the negative log10(p-values), and sort them from largest
-  # to smallest.
-  y <- rev(sort(-log10(x)))
-
-  # Create the q-q plot.
-  return(ggplot(data.frame(x = -log10((1:n)/n),y = y),aes(x = x,y = y)) +
-           geom_abline(intercept = 0,slope = 1,color = "magenta") +
-           geom_point(color = "dodgerblue",shape = 20,size = 2) +
-           labs(x = "Expected -log10 p-value",y = "Observed -log10 p-value") +
-           theme(axis.line = element_blank()))
-}
-
-inflation = plot.inflation(gwas_rsnp$p_lrt)
-save_plot("./data/gemma/figures/rsnp_inflation.png", inflation)
-
-table(gwas$p_lrt < 1e-6)
-table(gwas$significant)
-hist(gwas_rnsp$p_lrt)
-obs_rsnp      = -log10(sort(gwas_rsnp$p_lrt))
-obs_rped      = -log10(sort(gwas_rped$p_lrt))
-obs_qtl_rel   = -log10(sort(lrt$p))
-obs_happy     = -log10(sort(gwh$p))
-expected = -log10(stats::ppoints(nrow(gwas_rsnp)))
-exp_happy =-log10(stats::ppoints(nrow(gwh)))
-plot(obs_rped~expected, pch = 19, ylim = c(0, 15))
-points(obs_rsnp~expected, pch = 19, col = "blue")
-points(obs_qtl_rel~expected, pch = 19, col = "red")
-#points(obs_happy~exp_happy, pch = 19, col = "darkgreen")
-points(obs_lm~expected, pch = 19, col = "orange")
-abline(0, 1)
-abline(h = -log10(5.17E-7))
-cov(-log10(gwas_rsnp$p_lrt), -log10(gwas_rped$p_lrt))
-
-hist(gwas_rsnp$p_lrt)
-hist(gwas_rped$p_lrt)
 
 table(gwas_rped$p_lrt < 5.17E-7)
 gwas_rped[which(gwas_rped$p_lrt < 5.17E-7),]
@@ -173,13 +129,3 @@ save_plot("~/gemma_bwt_ped.png", gwas_bwt_GEMMA_ped, base_height = 7, base_aspec
 save_plot("~/gemma_bwt_loco.png", gwas_bwt_GEMMA_loco, base_height = 7, base_aspect_ratio = 2)
 save_plot("~/gemma_bwt_snp.png", gwas_bwt_GEMMA_snp, base_height = 7, base_aspect_ratio = 2)
 save_plot("~/gemma_bwt_all.png", all_gemma, base_height = 6, base_aspect_ratio = 1, ncol = 3, nrow = 1)
-
-save_plot("./data/gemma/figures/rsnp_manhattan3.png", gwas_bwt_p_snp)
-
-(gwas_bwt_p_qtlRel = ggman(gwas_qtl_rel, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "QTL Rel BWT", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_bwt_p_happy = ggman(gwh, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p", relative.positions = TRUE, title = "Happy BWT", sigLine = -log10(2.6e-5), pointSize = 1))
-
-(gwas_bwt_qvalue = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "qvalues", relative.positions = TRUE, title = "bwt 3 intervals"))
-
-save_plot("~/Dropbox/labbio/data/Atchley project/Genotypes/final_weight_gwas.png", gwas_bwt, base_height = 6, base_aspect_ratio = 2)
-

@@ -10,9 +10,10 @@ phenotypes = select(f6_snped, ID, Sex, Final_weight,
                     Litter_size_birth,
                     Birth_litter_size_weaning,
                     Foster_litter_size_weaning,
-                    contains("growth")) %>% distinct(ID, .keep_all = TRUE)
+                    growth_traits) %>% distinct(ID, .keep_all = TRUE)
+phenotypes[,growth_traits] = scale(phenotypes[,growth_traits])
 
-fam_file = read_delim("./data/plink_files/per_chrom/atchely_imputed_chr1.fam", delim = " ",
+fam_file = read_delim("./data/plink_files/per_chrom/atchley_imputed_chr1.fam", delim = " ",
                       col_names = c("litter", "ID",  "sire", "dam", "sex", "pheno"))
 
 fam_file$ID = as.character(fam_file$ID)
@@ -22,8 +23,8 @@ fam_pheno$ID = as.numeric(fam_pheno$ID)
 
 write_tsv(select(fam_pheno, litter, ID), "./data/gemma/keep_indviduals.txt", col_names = FALSE)
 for(i in 1:20){
-  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchely_imputed_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/growth_chr", i))
-  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchely_imputed_not_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/growth_not_chr", i))
+  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchley_imputed_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/growth_chr", i))
+  system(paste0("plink --bfile ./data/plink_files/per_chrom/atchley_imputed_not_chr", i, " --keep ./data/gemma/keep_indviduals.txt --make-bed --out ./data/gemma/growth_not_chr", i))
 }
 
 fam_file = read_delim("./data/gemma/growth_chr1.fam", delim = " ",
@@ -41,11 +42,15 @@ write_tsv(data.frame(1, fam_pheno$sex,
                      fam_pheno$Birth_litter_size_weaning,
                      fam_pheno$Foster_litter_size_weaning), "./data/gemma/gemma_covariates.tsv", col_names = FALSE)
 for(i in 1:20){
-  write_delim(select(fam_pheno, litter:growth_D49D56), paste0("./data/gemma/growth_chr", i, ".fam"), col_names = FALSE, delim = " ")
-  write_delim(select(fam_pheno, litter:growth_D49D56), paste0("./data/gemma/growth_not_chr", i, ".fam"), col_names = FALSE, delim = " ")
+  write_delim(select(fam_pheno, litter:growth_D35D42), paste0("./data/gemma/growth_chr", i, ".fam"), col_names = FALSE, delim = " ")
+  write_delim(select(fam_pheno, litter:growth_D35D42), paste0("./data/gemma/growth_not_chr", i, ".fam"), col_names = FALSE, delim = " ")
 }
 
 
+
+library(foreach)
+library(doMC)
+registerDoMC(4)
 foreach(i=1:20) %dopar% {
   system(paste0("gemma -bfile data/gemma/growth_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
  # rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
@@ -81,8 +86,6 @@ write_tsv(tbl_df(Af6), "./data/gemma/gemma_relatedness.tsv", col_names = FALSE)
 #cov(phenotypes[,4:6])
 #G + R
 
-library(foreach)
-library(doMC)
 registerDoMC(10)
 foreach(i=1:20) %dopar% {
 system(paste0("gemma \\
@@ -90,9 +93,9 @@ system(paste0("gemma \\
         -k output/gemma_relatedness_chr", i, ".cXX.txt \\
         -c ./data/gemma/gemma_covariates.tsv \\
         -lmm 2 \\
-        -n 1 2 3 \\
-        -o growth_r-snp_chr", i))
-  sprintf("SNP LOCO %d, traits 1-5", i)
+        -n 1 2 3 4 5 6\\
+        -o growth_t_1-6_r-LOCO_chr", i))
+  sprintf("SNP LOCO %d, traits 1-6", i)
 }
 
 gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-snp_chr",i,".assoc.txt")))
