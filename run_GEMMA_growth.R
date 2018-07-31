@@ -98,6 +98,19 @@ system(paste0("gemma \\
   sprintf("SNP LOCO %d, traits 1-6", i)
 }
 
+registerDoMC(10)
+foreach(i=1:20) %dopar% {
+system(paste0("gemma \\
+        -bfile ./data/gemma/growth_chr", i," \\
+        -k data/gemma/gemma_relatedness.tsv \\
+        -c ./data/gemma/gemma_covariates.tsv \\
+        -lmm 2 \\
+        -n 1 2 3 4 5 6\\
+        -o growth_t_1-6_r-ped_chr", i))
+  sprintf("SNP LOCO %d, traits 1-6", i)
+}
+
+gwas_rloco = ldply(1:20, function(i) read_tsv(paste0("./output/growth_t_1-6_r-LOCO_chr",i,".assoc.txt")))
 gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-snp_chr",i,".assoc.txt")))
 gwas_rped = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-ped_chr",i,".assoc.txt")))
 
@@ -125,6 +138,7 @@ table(gwas_rsnp$p_lrt < 5.17E-7)
 gwas_rped[which(gwas_rped$p_lrt < 5.17E-7),]
 (gwas_growth_p_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped growth", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_growth_p_snp = ggman(gwas_rsnp, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
+(gwas_growth_p_snp = ggman(gwas_rloco, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_growth_p_qtlRel = ggman(gwas_qtl_rel, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "QTL Rel growth", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_growth_p_happy = ggman(gwh, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p", relative.positions = TRUE, title = "Happy growth", sigLine = -log10(2.6e-5), pointSize = 1))
 
