@@ -25,8 +25,8 @@ tail(positions$chr)
 gen = inner_join(positions, gen, by = c("chr", "pos")) %>%
   dplyr::select(ID, chr, everything(), -chr2)
 
-snp_plot = ggplot(gen, aes(pos/1e6, chr)) + geom_point(size = 0.3) + labs(x = "Chromossomal position (Mb)", y = "Chromossome")
-cowplot::save_plot("~/snp_pos_plot.png", snp_plot, base_height = 6, base_aspect_ratio = 1.5)
+#snp_plot = ggplot(gen, aes(pos/1e6, chr)) + geom_point(size = 0.3) + labs(x = "Chromossomal position (Mb)", y = "Chromossome")
+#cowplot::save_plot("~/snp_pos_plot.png", snp_plot, base_height = 6, base_aspect_ratio = 1.5)
 
 IDs = data_frame(ID = as.character(colnames(raw_gen)[-c(1:9)]))
 

@@ -48,15 +48,15 @@ for(i in 1:20){
 
 
 
-library(foreach)
-library(doMC)
-registerDoMC(4)
-foreach(i=1:20) %dopar% {
-  system(paste0("gemma -bfile data/gemma/growth_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
- # rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
- # diag(rel_mat) = diag(rel_mat) + 1e-3
-#  write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
-}
+#library(foreach)
+#library(doMC)
+#registerDoMC(4)
+#foreach(i=1:20) %dopar% {
+  #system(paste0("gemma -bfile data/gemma/growth_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
+ ## rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
+ ## diag(rel_mat) = diag(rel_mat) + 1e-3
+##  write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
+#}
 #system("gemma -bfile data/gemma/growth -gk 1 -o gemma_relatedness_chr")
 
 A = 2*kinship(pedigree)
@@ -64,7 +64,7 @@ ids = as.character(fam_pheno$ID)
 Af6 = (A[ids,ids])
 Af6 = Af6 + diag(nrow(Af6)) * 1e-3
 colnames(Af6) = rownames(Af6) = phenotypes$ID
-write_tsv(tbl_df(Af6), "./data/gemma/gemma_relatedness.tsv", col_names = FALSE)
+write_tsv(tbl_df(Af6), "./data/gemma/pedigree_relatedness.tsv", col_names = FALSE)
 
 # phenotypes$animal = phenotypes$ID
 # Ainv = as(base::solve(bend_Af6$mat), "dgCMatrix")
@@ -90,19 +90,7 @@ registerDoMC(10)
 foreach(i=1:20) %dopar% {
 system(paste0("gemma \\
         -bfile ./data/gemma/growth_chr", i," \\
-        -k output/gemma_relatedness_chr", i, ".cXX.txt \\
-        -c ./data/gemma/gemma_covariates.tsv \\
-        -lmm 2 \\
-        -n 1 2 3 4 5 6\\
-        -o growth_t_1-6_r-LOCO_chr", i))
-  sprintf("SNP LOCO %d, traits 1-6", i)
-}
-
-registerDoMC(10)
-foreach(i=1:20) %dopar% {
-system(paste0("gemma \\
-        -bfile ./data/gemma/growth_chr", i," \\
-        -k data/gemma/gemma_relatedness.tsv \\
+        -k data/gemma/pedigree_relatedness.tsv \\
         -c ./data/gemma/gemma_covariates.tsv \\
         -lmm 2 \\
         -n 1 2 3 4 5 6\\
@@ -138,7 +126,7 @@ table(gwas_rsnp$p_lrt < 5.17E-7)
 gwas_rped[which(gwas_rped$p_lrt < 5.17E-7),]
 (gwas_growth_p_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped growth", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_growth_p_snp = ggman(gwas_rsnp, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_growth_p_snp = ggman(gwas_rloco, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
+(gwas_growth_p_loco = ggman(gwas_rloco, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_growth_p_qtlRel = ggman(gwas_qtl_rel, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "QTL Rel growth", sigLine = -log10(2.6e-5), pointSize = 1))
 (gwas_growth_p_happy = ggman(gwh, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p", relative.positions = TRUE, title = "Happy growth", sigLine = -log10(2.6e-5), pointSize = 1))
 
