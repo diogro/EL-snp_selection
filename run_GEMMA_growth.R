@@ -110,39 +110,3 @@ system(paste0("gemma \\
   sprintf("SNP loco %d, traits 1-4", i)
 }
 
-gwas_rloco = ldply(1:20, function(i) read_tsv(paste0("./output/growth_t_1-6_r-LOCO_chr",i,".assoc.txt")))
-gwas_rsnp = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-snp_chr",i,".assoc.txt")))
-gwas_rped = ldply(1:20, function(i) read_tsv(paste0("./output/growth_r-ped_chr",i,".assoc.txt")))
-
-plot.inflation <- function (x, size = 2) {
-
-  # Get the number of p-values.
-  n <- length(x)
-
-  # Compute the negative log10(p-values), and sort them from largest
-  # to smallest.
-  y <- rev(sort(-log10(x)))
-
-  # Create the q-q plot.
-  return(ggplot(data.frame(x = -log10((1:n)/n),y = y),aes(x = x,y = y)) +
-           geom_abline(intercept = 0,slope = 1,color = "magenta") +
-           geom_point(color = "dodgerblue",shape = 20,size = 2) +
-           labs(x = "Expected -log10 p-value",y = "Observed -log10 p-value") +
-           theme(axis.line = element_blank()))
-}
-
-plot.inflation(gwas_rped$p_lrt)
-plot.inflation(gwas_rsnp$p_lrt)
-
-table(gwas_rsnp$p_lrt < 5.17E-7)
-gwas_rped[which(gwas_rped$p_lrt < 5.17E-7),]
-(gwas_growth_p_ped = ggman(gwas_rped, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA ped growth", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_growth_p_snp = ggman(gwas_rsnp, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_growth_p_loco = ggman(gwas_rloco, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "GEMMA snp growth", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_growth_p_qtlRel = ggman(gwas_qtl_rel, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p_lrt", relative.positions = TRUE, title = "QTL Rel growth", sigLine = -log10(2.6e-5), pointSize = 1))
-(gwas_growth_p_happy = ggman(gwh, snp = "rs", bp = "ps", chrom = "chr", pvalue = "p", relative.positions = TRUE, title = "Happy growth", sigLine = -log10(2.6e-5), pointSize = 1))
-
-(gwas_growth_qvalue = ggman(gwas, snp = "rs", bp = "ps", chrom = "chr", pvalue = "qvalues", relative.positions = TRUE, title = "growth 3 intervals"))
-
-save_plot("~/Dropbox/labbio/data/Atchley project/Genotypes/final_weight_gwas.png", gwas_growth, base_height = 6, base_aspect_ratio = 2)
-
