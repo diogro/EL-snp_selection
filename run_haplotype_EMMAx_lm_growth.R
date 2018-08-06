@@ -25,7 +25,7 @@ K_norm = Af6_snp
 
 source("hapGWAS.R")
 
-growth_traits = colnames(select(f6_snped_growth, contains("growth")))
+#growth_traits = colnames(select(f6_snped_growth, contains("growth")))
 n_traits = length(growth_traits)
 
 gwas_emmax_ped = vector("list", length(growth_traits))
