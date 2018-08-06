@@ -42,22 +42,22 @@ write_tsv(data.frame(1, fam_pheno$sex,
                      fam_pheno$Birth_litter_size_weaning,
                      fam_pheno$Foster_litter_size_weaning), "./data/gemma/gemma_covariates.tsv", col_names = FALSE)
 for(i in 1:20){
-  write_delim(select(fam_pheno, litter:growth_D42D56), paste0("./data/gemma/growth_chr", i, ".fam"), col_names = FALSE, delim = " ")
-  write_delim(select(fam_pheno, litter:growth_D42D56), paste0("./data/gemma/growth_not_chr", i, ".fam"), col_names = FALSE, delim = " ")
+  write_delim(select(fam_pheno, litter:growth_D35D42), paste0("./data/gemma/growth_chr", i, ".fam"), col_names = FALSE, delim = " ")
+  write_delim(select(fam_pheno, litter:growth_D35D42), paste0("./data/gemma/growth_not_chr", i, ".fam"), col_names = FALSE, delim = " ")
 }
 
 
 
-library(foreach)
-library(doMC)
-registerDoMC(20)
-foreach(i=1:20) %dopar% {
- system(paste0("gemma -bfile data/gemma/growth_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
-## rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
-## diag(rel_mat) = diag(rel_mat) + 1e-3
-#  write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
-}
-#system("gemma -bfile data/gemma/growth -gk 1 -ogemma_relatedness_chr")
+#library(foreach)
+#library(doMC)
+#registerDoMC(4)
+#foreach(i=1:20) %dopar% {
+  #system(paste0("gemma -bfile data/gemma/growth_not_chr", i, " -gk 1 -o gemma_relatedness_chr", i))
+ ## rel_mat = as.matrix(read_delim(paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), delim = "\t", col_names = FALSE))
+ ## diag(rel_mat) = diag(rel_mat) + 1e-3
+##  write_delim(x = tbl_df(rel_mat), paste0("output/gemma_relatedness_chr", i, ".cXX.txt"), col_names = FALSE)
+#}
+#system("gemma -bfile data/gemma/growth -gk 1 -o gemma_relatedness_chr")
 
 A = 2*kinship(pedigree)
 ids = as.character(fam_pheno$ID)
@@ -92,22 +92,10 @@ system(paste0("gemma \\
         -bfile ./data/gemma/growth_chr", i," \\
         -k data/gemma/pedigree_relatedness.tsv \\
         -c ./data/gemma/gemma_covariates.tsv \\
-        -lmm 4 \\
-        -n 1 2 3 4\\
-        -o growth_r-ped_multivariate_2w_t1-4_chr", i))
-  sprintf("SNP PED %d, traits 1-4", i)
-}
-
-registerDoMC(20)
-foreach(i=1:20) %dopar% {
-system(paste0("gemma \\
-        -bfile ./data/gemma/growth_chr", i," \\
-        -k output/gemma_relatedness_chr", i, ".cXX.txt \\
-        -c ./data/gemma/gemma_covariates.tsv \\
-        -lmm 4 \\
-        -n 1 2 3 4\\
-        -o growth_r-loco_multivariate_2w_t1-4_chr", i))
-  sprintf("SNP loco %d, traits 1-4", i)
+        -lmm 2 \\
+        -n 1 2 3 4 5 6\\
+        -o ./data/gemma_output/growth_r-ped_t1-6/gwas_chr", i))
+  sprintf("SNP PED %d, traits 1-6", i)
 }
 
 gwas_rloco = ldply(1:20, function(i) read_tsv(paste0("./output/growth_t_1-6_r-LOCO_chr",i,".assoc.txt")))
