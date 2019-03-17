@@ -55,6 +55,5 @@ full_data_Strain = full_data %>% filter(Gen == "Strain")
 
 growth_traits = c("growth_D0D14", "growth_D14D28", "growth_D28D42", "growth_D42D56")
 
-
-
+full_data_F6[,growth_traits]$growth_D42D56
 #source("./create_kinship_king.R")
