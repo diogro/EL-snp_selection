@@ -1,7 +1,7 @@
 source("./read_phenotypes.R")
 source("./modular_classes.R")
 
-library(evolqg)
+if(!require(evolqg)){install.packages("evolqg"); library(evolqg)}
 if(!require(superheat)){install.packages("superheat"); library(superheat)}
 if(!require(corrplot)){install.packages("corrplot"); library(corrplot)}
 vectorCor = function(x, y) Normalize(x) %*% Normalize(y)
