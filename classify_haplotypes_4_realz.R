@@ -2,52 +2,31 @@ source("read_phenotypes.R")
 
 if(!require(vcfR)){install.packages("vcfR"); library(vcfR)}
 if(!require(stringr)){install.packages("stringr"); library(stringr)}
-vcf <- read.vcfR("./data/imputed.vcf.vcf.gz")
-raw_gen = tbl_df(cbind(vcf@fix, vcf@gt))
 
-full_id = colnames(vcf@gt)[-1]
-IDs = ldply(full_id, function(x) c(x, unlist(strsplit(x, "_"))))
-colnames(IDs) = c("full", "ID")
-rm(vcf)
+data(mice_genotypes)
 
-gen = dplyr::select(raw_gen, CHROM, POS, ID, everything()) %>%
-    dplyr::select(-REF, -ALT, -QUAL, -FILTER, -INFO, -FORMAT) %>%
-    rename(chr = CHROM,
-           pos = POS) %>%
-    arrange(chr, pos) %>%
-    filter(chr != 21)
-gen$chr = as.numeric(gen$chr)
-gen$pos = as.numeric(gen$pos)
-rm(raw_gen)
-
-## From http://churchill-lab.jax.org/mousemapconverter
-## NCBI Build 37 bp -> Sex-Averaged cM Cox
-positions = read.table("./data/marker_positions.txt", header = FALSE, stringsAsFactors = FALSE) %>% tbl_df
-names(positions) = c("chr2", "pos", "chr", "gpos")
-positions$chr = as.integer(positions$chr)
-tail(positions$chr)
-gen = inner_join(positions, gen, by = c("chr", "pos")) %>%
-  dplyr::select(ID, chr, everything(), -chr2)
-rownames(gen) = gen$ID
+gen = mice_genotypes$df
 chr_maps = dlply(gen, .(chr), function(x) x[,1:4])
 
+IDs = data.frame(ID = mice_genotypes$array |> colnames())
 full_snped = inner_join(full_data, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight, contains("growth"))
+  select(ID, Litter:Foster_litter_size_weaning, Final_weight, contains("growth"))
 
 f6_snped = inner_join(full_data_F6, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight, contains("growth"))
+  select(ID, Litter:Foster_litter_size_weaning, Final_weight, contains("growth"))
 
 f5_snped = inner_join(full_data_F5, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight, contains("growth"))
+  select(ID, Litter:Foster_litter_size_weaning, Final_weight, contains("growth"))
 
 f1_snped = inner_join(full_data_F1, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight, contains("growth"))
+  select(ID, Litter:Foster_litter_size_weaning, Final_weight, contains("growth"))
 
 pat_snped = inner_join(full_data_Strain, IDs, by = "ID") %>%
-  select(ID, Litter_ID_new:Foster_litter_size_weaning, Final_weight, contains("growth"))
+  select(ID, Litter:Foster_litter_size_weaning, Final_weight, contains("growth"))
 
 .n = function(x) as.numeric(factor(x, levels = c("M", "F")))
-pedigree = as.data.frame(read.csv("./data/Intercross_pedigree2.csv")) %>% dplyr::rename(id = animal) %>% orderPed
+data(mice_pedigree)
+pedigree =mice_pedigree
 full_data$ID = as.numeric(full_data$ID)
 ped2 = (left_join(dplyr::rename(pedigree, ID = id), dplyr::select(full_data, ID, Sex), by = "ID"))
 full_data$ID = as.character(full_data$ID)
@@ -77,9 +56,8 @@ load("./data/gemma_relatedness.Rdata")
 #sex=ped2$Sex)
 
 getFounders = function(current_line){
-  gen_cols = IDs$full[match(as.character(dplyr::filter(pat_snped, Strain == current_line)$ID), IDs$ID)]
+  gen_cols = IDs$ID[match(as.character(dplyr::filter(pat_snped, Strain == current_line)$ID), IDs$ID)]
   current_line_gen = gen[,gen_cols]
-  current_line_gen = t(laply(current_line_gen, substring, 1, 3))
   colnames(current_line_gen) = paste(current_line, 1:length(gen_cols), sep = "_")
   rownames(current_line_gen) = gen$ID
   current_line_gen
@@ -101,7 +79,7 @@ classifyInd = function(ID, join = TRUE){
     single_ind_chr = vector("list", 20)
     for(i in 1:20) single_ind_chr[[i]] = single_ind[gen$chr == i]
     haplotypes = tibble(chr = numeric(),
-                        seg = numeric(),
+                        seg = character(),
                         start = numeric(),
                         finish = numeric(),
                         len = numeric(),
@@ -121,20 +99,20 @@ classifyInd = function(ID, join = TRUE){
           seg = seg + 1
           num_seg = num_seg + 1
           plausible_lines = single_ind_chr[[chr]][[i]]
-          line = c(chr,
-                   "R",
-                   seg_start, i, 1,
-                   paste(plausible_lines, collapse = ":"), length(plausible_lines))
+          line = data.frame(chr = chr,
+                   seg = "R",
+                   start = seg_start, finish = i, len = 1,
+                   strain = paste(plausible_lines, collapse = ":"),  nstrain = length(plausible_lines))
           #print(line)
           haplotypes[num_seg,] = line
           num_seg = num_seg + 1
           plausible_lines = line_order
         } else{
           if(length(plausible_lines_new) > 0) plausible_lines = plausible_lines_new
-          line = c(chr,
-                   seg,
-                   seg_start, i, i - seg_start,
-                   paste(plausible_lines, collapse = ":"), length(plausible_lines))
+          line = data.frame(chr = chr,
+                   seg = as.character(seg),
+                   start = seg_start, finish = i, len = i - seg_start,
+                   strain = paste(plausible_lines, collapse = ":"), nstrain = length(plausible_lines))
           #print(line)
           haplotypes[num_seg,] = line
         }
@@ -148,6 +126,8 @@ classifyInd = function(ID, join = TRUE){
   }
   out
 }
+classifyInd(ID)
+x  = out[[1]]
 fixRecombinations = function(x){
   while(TRUE){
     recon = which(x$seg == "R")[1]
@@ -164,7 +144,7 @@ fixRecombinations = function(x){
     if(length(consensus) > 0){
       seg = x$seg[recon-1]
       x = x[-c(recon-1, recon, recon+1),]
-      line = c(chr,
+      line = data.frame(chr,
                seg,
                start, end, end - start,
                paste(consensus, collapse = ":"), length(consensus))
@@ -177,7 +157,7 @@ fixRecombinations = function(x){
       if(length(consensus) > 0){
         seg = x$seg[recon+1]
         x = x[-c(recon, recon+1),]
-        line = c(chr,
+        line = data.frame(chr,
                  seg,
                  middle, end, end - middle,
                  paste(consensus, collapse = ":"), length(consensus))
@@ -187,7 +167,7 @@ fixRecombinations = function(x){
         seg = x$seg[recon+1]
         next_seg_strain = x$strain[recon+1]
         x = x[-c(recon, recon+1),]
-        line = c(chr,
+        line = data.frame(chr,
                  seg,
                  middle, end, end - middle,
                  next_seg_strain, length(next_seg_strain))
@@ -240,7 +220,8 @@ plotHaplotype = function(hap){
   datapoly <- merge(values, bar_positions, by = c("id"))
   p = ggplot(datapoly, aes(x = x, y = y)) +
     geom_polygon(aes(fill = value, group = id), color = "black") +
-    scale_x_continuous(breaks = 1:20, labels = c(1:19, "X"))
+    scale_x_continuous(breaks = 1:20, labels = c(1:19, "X")) + labs(x = "chromossome", y = "Position (bp)") +
+    scale_fill_manual(values=fill_colors[unique(datapoly$value)]) 
   return(p)
 }
 
@@ -250,7 +231,7 @@ names(founders) = line_order
 founders_dict = lapply(1:nrow(founders[[1]]), createFounderDict)
 names(founders_dict) = gen$ID
 
-# registerDoMC(4)
+# registerDoMC(32)
 # f6_haplotypes = llply(f6_snped$ID, classifyInd, .parallel = TRUE)
 # names(f6_haplotypes) = f6_snped$ID
 # f5_haplotypes = llply(f5_snped$ID, classifyInd, .parallel = TRUE)
@@ -260,18 +241,43 @@ names(founders_dict) = gen$ID
 # save(founders, founders_dict, f6_haplotypes, f5_haplotypes, f1_haplotypes, file = "./data/infered_haplotypes.Rdata")
 load("./data/infered_haplotypes.Rdata")
 
-# for(i in seq_along(f1_snped$ID)){
-#  p = plotHaplotype(f1_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F1",f1_snped$ID[[i]], f1_snped$Sex[i]))
-#  save_plot(paste0("./data/haplotype_inference_figures/f1_haplotype_ID-", f1_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-# }
-# for(i in seq_along(f6_snped$ID)){
-#   p = plotHaplotype(f6_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F6",f6_snped$ID[[i]], f6_snped$Sex[i]))
-#   save_plot(paste0("./data/haplotype_inference_figures/f6_haplotype_ID-", f6_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-# }
-# for(i in seq_along(f5_snped$ID)){
-#   p = plotHaplotype(f5_haplotypes[[i]]) + labs(x = "chromossome", y = "Position (bp)") + ggtitle(paste("F5",f5_snped$ID[[i]], f5_snped$Sex[i]))
-#   save_plot(paste0("./data/haplotype_inference_figures/f5_haplotype_ID-", f5_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
-# }
+all_classes = c(ldply(f1_haplotypes, function(x) ldply(x))$strain |> unique(),
+ldply(f5_haplotypes, function(x) ldply(x))$strain |> unique(),
+ldply(f6_haplotypes, function(x) ldply(x))$strain |> unique()) |> unique() |> sort()
+library(scales)
+fill_colors = hue_pal()(length(all_classes))
+names(fill_colors) = all_classes
+
+for(i in seq_along(f1_snped$ID)){
+ p = plotHaplotype(f1_haplotypes[[i]]) + ggtitle(paste("F1",f1_snped$ID[i], f1_snped$Sex[i], f1_snped$Strain[i]))
+ save_plot(paste0("./data/haplotype_inference_figures/f1_haplotype_ID-", f1_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+}
+for(i in seq_along(f6_snped$ID)){
+  p = plotHaplotype(f6_haplotypes[[i]]) + ggtitle(paste("F6",f6_snped$ID[[i]], f6_snped$Sex[i]))
+  save_plot(paste0("./data/haplotype_inference_figures/f6_haplotype_ID-", f6_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+}
+for(i in seq_along(f5_snped$ID)){
+  p = plotHaplotype(f5_haplotypes[[i]]) + ggtitle(paste("F5",f5_snped$ID[[i]], f5_snped$Sex[i]))
+  save_plot(paste0("./data/haplotype_inference_figures/f5_haplotype_ID-", f5_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 2)
+}
+
+library(patchwork)
+for(i in seq_along(f6_snped$ID)){
+  ID = f6_snped$ID[[i]]
+  dam = as.character(ped2[ped2$ID == ID, "dam"])
+  sire =  as.character(ped2[ped2$ID == ID, "sire"])
+  if(any(names(f5_haplotypes) == dam)){
+    p_dam = plotHaplotype(f5_haplotypes[[dam]]) + ggtitle(paste("F5", dam, "Dam")) 
+  } else
+    p_dam = ggplot()
+  if(any(names(f5_haplotypes) == sire)){
+    p_sire = plotHaplotype(f5_haplotypes[[sire]]) + ggtitle(paste("F5", sire, "Sire")) 
+  } else
+    p_sire = ggplot()
+  p_f6 = (plotHaplotype(f6_haplotypes[[i]]) + ggtitle(paste("F6",f6_snped$ID[[i]], f6_snped$Sex[i])))
+  p = (p_sire + p_dam) / p_f6  + plot_layout(guides = "collect")
+  save_plot(paste0("./data/haplotype_inference_figures/f6_haplotype_ID-", f6_snped$ID[i], ".png"), p, base_height = 5, base_aspect_ratio = 1.7, ncol = 2, nrow = 2)
+}
 
 # compareChr = function(x, y) sum(out <- sapply(Map(intersect, lapply(x, strsplit, ":"), lapply(y, strsplit, ":")), length))/length(out)
 #
